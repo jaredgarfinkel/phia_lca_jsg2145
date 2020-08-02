@@ -138,101 +138,141 @@ bio_dat_lca = bio_dat %>%
 
 ## First 90 (awareness)
 
-``` r
-# This table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and had an art identified by a blood test
-tbl1 = xtabs(~ aware + art, data = bio_dat)
-chisq.test(tbl1)
-```
-
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl1
-    ## X-squared = 4290.8, df = 4, p-value < 2.2e-16
-
-``` r
-# This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and the status of a dummy variable that measures whether they have suppressed viral loads
-tbl2 = xtabs(~ aware + arvstatus, data = bio_dat)
-chisq.test(tbl2)
-```
-
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl2
-    ## X-squared = 4033.1, df = 4, p-value < 2.2e-16
-
-``` r
-# This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and reported that they were taking ART.
-tbl3 = xtabs(~ aware + artselfreported, data = bio_dat)
-chisq.test(tbl3)
-```
-
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl3
-    ## X-squared = 2445.9, df = 4, p-value < 2.2e-16
-
-``` r
-# This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and the pre-processed self-reported awareness of their HIV status
-tbl4 = xtabs(~ aware + awareselfreported, data = bio_dat)
-chisq.test(tbl4)
-```
-
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl4
-    ## X-squared = 2546.9, df = 4, p-value < 2.2e-16
+### pre-processed data
 
 ``` r
 # This table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and had an art identified by a blood test
-tbl1 = xtabs(~ tri90aware + tri90art, data = bio_dat)
-chisq.test(tbl1)
-```
+tbl1 = xtabs(~ awareselfreported + tri90art, data = bio_dat)
 
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl1
-    ## X-squared = 6110, df = 6, p-value < 2.2e-16
-
-``` r
 # This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and the status of a dummy variable that measures whether they have suppressed viral loads
-tbl2 = xtabs(~ tri90aware + arvstatus, data = bio_dat)
-chisq.test(tbl2)
-```
+tbl2 = xtabs(~ awareselfreported + arvstatus, data = bio_dat)
 
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl2
-    ## X-squared = 3795.2, df = 4, p-value < 2.2e-16
-
-``` r
 # This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and reported that they were taking ART.
-tbl3 = xtabs(~ tri90aware + artselfreported, data = bio_dat)
-chisq.test(tbl3)
-```
+tbl3 = xtabs(~ awareselfreported + artselfreported, data = bio_dat)
 
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl3
-    ## X-squared = 2455.6, df = 4, p-value < 2.2e-16
-
-``` r
 # This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and the pre-processed self-reported awareness of their HIV status
 tbl4 = xtabs(~ tri90aware + awareselfreported, data = bio_dat)
-chisq.test(tbl4)
 ```
 
-    ## 
-    ##  Pearson's Chi-squared test
-    ## 
-    ## data:  tbl4
-    ## X-squared = 2544, df = 4, p-value < 2.2e-16
+``` r
+# Grand total
+nrow(bio_dat) # 3,055
+```
+
+    ## [1] 3055
+
+``` r
+# This table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and had an art identified by a blood test
+tbl1_tri90 = xtabs(~ tri90aware + tri90art, data = bio_dat)
+
+# This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and the status of a dummy variable that measures whether they have suppressed viral loads
+tbl2_tri90 = xtabs(~ tri90aware + arvstatus, data = bio_dat)
+
+# This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and reported that they were taking ART.
+tbl3_tri90 = xtabs(~ tri90aware + artselfreported, data = bio_dat)
+
+# This contingency table shows the respondents/informants who reported that they were aware of their hiv status or had an identifiable arv drug in their blood test and the pre-processed self-reported awareness of their HIV status
+tbl4_tri90 = xtabs(~ tri90aware + awareselfreported, data = bio_dat)
+
+# This table shows the respondents processed tri90aware status and their viral load suppression (under 200 copies/milliliter)
+xtabs(~ tri90aware + vlunder200, data = bio_dat)
+```
+
+    ##           vlunder200
+    ## tri90aware    1    2
+    ##         1  2105  546
+    ##         2    16  330
+    ##         99   44   14
+
+### tri90art
+
+This combined chart shows the contingency table of awareselfreported
+vs. tri90art along with tri90aware vs. tri90art. While there are
+missing values in awareselfreported, there are none in tri90aware. The
+57 missing values from tri90art were classified as missing for
+tri90aware data. The 60 respondents who were on art were reclassified as
+tri90aware.
+
+``` r
+g1 <- tableGrob(tbl1)
+g2 <- tableGrob(tbl1_tri90)
+
+haligned <- gtable_combine(g1,g2, along=1)
+valigned <- gtable_combine(g1,g2, along=2)
+grid.arrange(haligned, valigned, ncol=2, top = "tri90art, awareselfreported vs. tri90aware")
+```
+
+<img src="phia_lca_jsg2145_files/figure-gfm/unnamed-chunk-2-1.png" width="90%" />
+
+### arvstatus
+
+This chart shows contingency tables for awareselfreported alongside
+those for tri90aware with respect to arvstatus. As before, those with
+detectable arvs in their blood sample were reclassified as tri90aware
+regardless of selfreported aware status. Those missing arvstatus data
+appear to have been treated or classified differently. 3 respondents
+with missing arvstatus data were classified as tri90aware compared to 50
+self-reported aware who were missing arvstatus data. Meanwhile, there
+was 1 respondent missing arvstatus classified as not tri90aware compared
+to 6 of those who reported that they were unaware and had missing
+arvstatus data. Although 52 respondents with missing arvstatus data were
+considered null under tri90aware, none who were missing
+awareselfreported data were also missing arvstatus data. Finally, it
+appears that 6 respondents who had no detectable arvs were considered
+missing tri90aware data, even though only 1 who had no detectable arvs
+were missing awareselfreported data. So, overall the biggest change was
+between those missing arvstatus data who said they were aware, most of
+whom it appears were reclassified as missing data in tri90aware. 50/3055
+= 1.6%. This would effectively reduce the prevalence of awareness by
+removing about 50 individuals from the analysis.
+
+#### Why were subjects removed from the analysis?
+
+Generally an observation was removed if they had incomplete tri90 data,
+including blood-test data. Specifically, observations to be excluded in
+the 90 90 90 analysis with ARV data due to incomplete data defined as:
+aware missing and ARV data missing, aware and both ARV and self-reported
+ART data missing, or ARVs detectable / self-reported on ART and VLS
+missing.
+
+``` r
+h1 <- tableGrob(tbl2)
+h2 <- tableGrob(tbl2_tri90)
+
+haligned <- gtable_combine(h1,h2, along=1)
+valigned <- gtable_combine(h1,h2, along=2)
+grid.arrange(haligned, valigned, ncol=2, top = "arvstatus")
+```
+
+<img src="phia_lca_jsg2145_files/figure-gfm/unnamed-chunk-3-1.png" width="90%" />
+
+## artselfreported
+
+44 respondents were removed from the aware group if they reported that
+they were aware and on art. 3 respondents were removed from the aware
+group if they were awareselfreported and had no detectable arvs. 64
+respondents who reported that they were unaware were reclassified. Of
+those reclassified, it appears that 55 of them were classified as aware
+and 9 were classified as missing data and not included in the tri90
+analysis. So, as about 50 respondents were reclassified as aware from
+artselfreported data, almost 50 respondents were removed from the tri90
+analysis who had previously been considered aware. This is a
+differential misclassification and deserves further study.
+
+``` r
+j1 <- tableGrob(tbl3)
+j2 <- tableGrob(tbl3_tri90)
+
+haligned <- gtable_combine(j1,j2, along=1)
+valigned <- gtable_combine(j1,j2, along=2)
+grid.arrange(haligned, valigned, ncol=2, top = "artselfreported")
+```
+
+<img src="phia_lca_jsg2145_files/figure-gfm/unnamed-chunk-4-1.png" width="90%" />
+
+## awareselfreported
+
+### tri90 (processed) data
 
 ``` r
 bio_cong_dat = biomarker %>% 
@@ -263,6 +303,7 @@ bio_cong_dat = biomarker %>%
 ```
 
 ``` r
+# Grand total
 nrow(bio_cong_dat)
 ```
 
@@ -299,7 +340,7 @@ xtabs(~ tri90aware + tri90art, data = bio_cong_dat)
     ##          2    0    0  346
 
 ``` r
-# There were 736 respondents with viral load above 200 who were classified as aware. This may be indicative of treatment non-compliance. There were 96 respondents with viral load under 200 classified as unaware. This may indicate the presence of elite suppressors or transient viral load suppression among respondents.
+# There were 546 respondents with viral load above 200 who were classified as aware. This may be indicative of treatment non-compliance. There were 96 respondents with viral load under 200 classified as unaware. This may indicate the presence of elite suppressors or transient viral load suppression among respondents.
 xtabs(~tri90aware + vlunder200, bio_cong_dat)
 ```
 
@@ -397,7 +438,7 @@ xtabs(~tri90aware + awareselfreported + tri90art, bio_cong_dat) %>%
     ##            99                            0    0    0
 
 ``` r
-# Of those with viral loads above 200 copies/milliliter, 720 reported that they were aware and were subsequently coded as tri90aware; 16 reported that they were unaware, but were ultimately coded as aware; 250 responded that they were unaware and were coded as unaware. So, 16/986 or 1.6% of those with elevated viral loads were reclassified. On the other hand, of those with suppressed viral loads, 43 reported they were unaware and were subsequently reclassified; 96 reported that they were unaware and found to be unaware. So, of those who self-reported that they were unaware, 96/405 or 24% had viral load under 200 copies/milliliter, and 59/405 or 15% were reclassified as tri90aware. 
+# Of those with viral loads above 200 copies/milliliter, 532 reported that they were aware and were subsequently coded as tri90aware; 13 reported that they were unaware, but were ultimately coded as aware; 330 responded that they were unaware and were coded as unaware. So, 13/986 or 1.5% of those with elevated viral loads were reclassified. On the other hand, of those with suppressed viral loads, 46 reported they were unaware and were subsequently reclassified; 16 reported that they were unaware and found to be unaware. So, of those who self-reported that they were unaware, 62/405 or 15% had viral load under 200 copies/milliliter, and 46/405 or 11% were reclassified as tri90aware. 
 xtabs(~tri90aware + awareselfreported + vlunder200, bio_cong_dat) %>% 
   ftable(.)
 ```
@@ -442,7 +483,7 @@ xtabs(~tri90aware + awareselfreported + vls, bio_cong_dat) %>%
     ##            99                       0    0
 
 ``` r
-#This table shows that somehow 230 individuals with viral loads over 1000 copies/milliliter were classified as having viral loads under 200 copies/milliliter
+#This table shows that somehow 122 individuals with viral loads under 1000 copies/milliliter were classified as having viral loads over 200 copies/milliliter
 xtabs(~vlunder200 + vls, bio_dat)
 ```
 
@@ -457,173 +498,12 @@ The variable, vlunder200, was coded as ifelse(vlunder200 \< 200, 1, 2),
 however, the variable was still a character when it ran. So, hundreds of
 observations had been misclassified. It should be fine now.
 
-``` r
-bio_dat %>% 
-  mutate(resultvlc = as.numeric(resultvlc, na.rm = TRUE)) %>% 
-  filter(resultvlc < 201) # 2,165
-```
+# Second 90 (arv status)
 
-    ## # A tibble: 2,165 x 14
-    ##    personid hiv1statusfinal~ aware   art awareselfreport~ arvstatus
-    ##    <chr>    <chr>            <dbl> <dbl>            <dbl>     <dbl>
-    ##  1 SW00000~ 1                    1     1                1         1
-    ##  2 SW00000~ 1                    1     1                1         1
-    ##  3 SW00000~ 1                    1     1                1         1
-    ##  4 SW00000~ 1                    1     1                1         1
-    ##  5 SW00000~ 1                    1     1                1         1
-    ##  6 SW00000~ 1                    1     1                1         1
-    ##  7 SW00000~ 1                    1     1                1         1
-    ##  8 SW00000~ 1                    1     1                1         1
-    ##  9 SW00000~ 1                    1     1                1         1
-    ## 10 SW00000~ 1                   99    99                1        99
-    ## # ... with 2,155 more rows, and 8 more variables: artselfreported <dbl>,
-    ## #   resultvlc <dbl>, vls <dbl>, tri90 <dbl>, tri90aware <dbl>, tri90art <dbl>,
-    ## #   tri90vls <dbl>, vlunder200 <dbl>
+## If a person self reports that they are unaware and has detectable arvs in their blood, what is the probability of them being tri90aware?
 
-``` r
-# This doesn't work because the resultvlc hasn't been recoded
-biomarker %>% 
-  filter(hiv1statusfinalsurvey == 1) %>% 
-  mutate(resultvlc = as.numeric(resultvlc, na.rm = TRUE)) %>% 
-  filter(resultvlc < 201) # 392
-```
+## If a person self reports that they are unaware and is viral load suppressed (under 200 copies/ milliliter), what is the probability of them being tri90aware?
 
-    ## # A tibble: 392 x 176
-    ##    country householdid personid bt_status gender   age cd4count hiv1statusfinal~
-    ##    <chr>   <chr>       <chr>        <dbl>  <dbl> <dbl> <chr>    <chr>           
-    ##  1 Eswati~ SW00000000~ SW00000~         1      1    36 258      1               
-    ##  2 Eswati~ SW00000000~ SW00000~         9      2    50 467      1               
-    ##  3 Eswati~ SW00000000~ SW00000~         1      1    26 390      1               
-    ##  4 Eswati~ SW00000000~ SW00000~         1      1    37 898      1               
-    ##  5 Eswati~ SW00000000~ SW00000~         1      2    59 624      1               
-    ##  6 Eswati~ SW00000000~ SW00000~         1      2    54 601      1               
-    ##  7 Eswati~ SW00000000~ SW00000~         1      2    27 352      1               
-    ##  8 Eswati~ SW00000000~ SW00000~         1      2    40 507      1               
-    ##  9 Eswati~ SW00000000~ SW00000~         1      2    33 758      1               
-    ## 10 Eswati~ SW00000000~ SW00000~         1      2    65 770      1               
-    ## # ... with 382 more rows, and 168 more variables: recentlagvl <dbl>,
-    ## #   lagodnfinal <chr>, arvefv <chr>, arvlpv <chr>, arvnvp <chr>,
-    ## #   resultvlc <dbl>, surveystdt <date>, cd4cat <dbl>, hivselfreport <dbl>,
-    ## #   hivstatusfinal <dbl>, recentlagvlarv <dbl>, aware <dbl>, art <dbl>,
-    ## #   awareselfreported <dbl>, artselfreported <dbl>, awareartselfreported <dbl>,
-    ## #   artinitiated12months <dbl>, artduration <dbl>, arvstatus <dbl>, vls <dbl>,
-    ## #   tri90 <dbl>, tri90aware <dbl>, tri90art <dbl>, tri90vls <dbl>, btwt0 <chr>,
-    ## #   varstrat <chr>, varunit <chr>, btwt001 <chr>, btwt002 <chr>, btwt003 <chr>,
-    ## #   btwt004 <chr>, btwt005 <chr>, btwt006 <chr>, btwt007 <chr>, btwt008 <chr>,
-    ## #   btwt009 <chr>, btwt010 <chr>, btwt011 <chr>, btwt012 <chr>, btwt013 <chr>,
-    ## #   btwt014 <chr>, btwt015 <chr>, btwt016 <chr>, btwt017 <chr>, btwt018 <chr>,
-    ## #   btwt019 <chr>, btwt020 <chr>, btwt021 <chr>, btwt022 <chr>, btwt023 <chr>,
-    ## #   btwt024 <chr>, btwt025 <chr>, btwt026 <chr>, btwt027 <chr>, btwt028 <chr>,
-    ## #   btwt029 <chr>, btwt030 <chr>, btwt031 <chr>, btwt032 <chr>, btwt033 <chr>,
-    ## #   btwt034 <chr>, btwt035 <chr>, btwt036 <chr>, btwt037 <chr>, btwt038 <chr>,
-    ## #   btwt039 <chr>, btwt040 <chr>, btwt041 <chr>, btwt042 <chr>, btwt043 <chr>,
-    ## #   btwt044 <chr>, btwt045 <chr>, btwt046 <chr>, btwt047 <chr>, btwt048 <chr>,
-    ## #   btwt049 <chr>, btwt050 <chr>, btwt051 <chr>, btwt052 <chr>, btwt053 <chr>,
-    ## #   btwt054 <chr>, btwt055 <chr>, btwt056 <chr>, btwt057 <chr>, btwt058 <chr>,
-    ## #   btwt059 <chr>, btwt060 <chr>, btwt061 <chr>, btwt062 <chr>, btwt063 <chr>,
-    ## #   btwt064 <chr>, btwt065 <chr>, btwt066 <chr>, btwt067 <chr>, btwt068 <chr>,
-    ## #   btwt069 <chr>, btwt070 <chr>, btwt071 <chr>, btwt072 <chr>, btwt073 <chr>,
-    ## #   ...
+## If a person self reports that they are aware and has detectable arvs in their blood, what is the probability of them self-reporting that they are on arvs?
 
-``` r
-# This shows 122 more people were viral load suppressed at 1000 copies per milliliter compared to 200 copies per milliliter. This is within the realm of what would be expected.
-bio_dat %>% 
-  filter(vls == 1) # 2,287
-```
-
-    ## # A tibble: 2,287 x 14
-    ##    personid hiv1statusfinal~ aware   art awareselfreport~ arvstatus
-    ##    <chr>    <chr>            <dbl> <dbl>            <dbl>     <dbl>
-    ##  1 SW00000~ 1                    1     1                1         1
-    ##  2 SW00000~ 1                    1     1                1         1
-    ##  3 SW00000~ 1                    1     1                1         1
-    ##  4 SW00000~ 1                    1     1                1         1
-    ##  5 SW00000~ 1                    1     1                1         1
-    ##  6 SW00000~ 1                    1     1                1         1
-    ##  7 SW00000~ 1                    1     1                1         1
-    ##  8 SW00000~ 1                    1     1                1         1
-    ##  9 SW00000~ 1                    2     2                2         2
-    ## 10 SW00000~ 1                    1     1                1         1
-    ## # ... with 2,277 more rows, and 8 more variables: artselfreported <dbl>,
-    ## #   resultvlc <dbl>, vls <dbl>, tri90 <dbl>, tri90aware <dbl>, tri90art <dbl>,
-    ## #   tri90vls <dbl>, vlunder200 <dbl>
-
-``` r
-bio_cong_dat %>% 
-  filter(vls == 1) # 2,242
-```
-
-    ## # A tibble: 2,242 x 14
-    ##    personid hiv1statusfinal~ aware   art awareselfreport~ arvstatus
-    ##    <chr>    <chr>            <dbl> <dbl>            <dbl>     <dbl>
-    ##  1 SW00000~ 1                    1     1                1         1
-    ##  2 SW00000~ 1                    1     1                1         1
-    ##  3 SW00000~ 1                    1     1                1         1
-    ##  4 SW00000~ 1                    1     1                1         1
-    ##  5 SW00000~ 1                    1     1                1         1
-    ##  6 SW00000~ 1                    1     1                1         1
-    ##  7 SW00000~ 1                    1     1                1         1
-    ##  8 SW00000~ 1                    1     1                1         1
-    ##  9 SW00000~ 1                    2     2                2         2
-    ## 10 SW00000~ 1                    1     1                1         1
-    ## # ... with 2,232 more rows, and 8 more variables: artselfreported <dbl>,
-    ## #   resultvlc <dbl>, vls <dbl>, tri90 <dbl>, tri90aware <dbl>, tri90art <dbl>,
-    ## #   tri90vls <dbl>, vlunder200 <dbl>
-
-``` r
-bio_cong_dat %>% 
-  filter(resultvlc < 200) # 2,011
-```
-
-    ## # A tibble: 2,121 x 14
-    ##    personid hiv1statusfinal~ aware   art awareselfreport~ arvstatus
-    ##    <chr>    <chr>            <dbl> <dbl>            <dbl>     <dbl>
-    ##  1 SW00000~ 1                    1     1                1         1
-    ##  2 SW00000~ 1                    1     1                1         1
-    ##  3 SW00000~ 1                    1     1                1         1
-    ##  4 SW00000~ 1                    1     1                1         1
-    ##  5 SW00000~ 1                    1     1                1         1
-    ##  6 SW00000~ 1                    1     1                1         1
-    ##  7 SW00000~ 1                    1     1                1         1
-    ##  8 SW00000~ 1                    1     1                1         1
-    ##  9 SW00000~ 1                    1     1                1         1
-    ## 10 SW00000~ 1                    1     1                1         1
-    ## # ... with 2,111 more rows, and 8 more variables: artselfreported <dbl>,
-    ## #   resultvlc <dbl>, vls <dbl>, tri90 <dbl>, tri90aware <dbl>, tri90art <dbl>,
-    ## #   tri90vls <dbl>, vlunder200 <dbl>
-
-``` r
-#There are still 129 more folks who are virally suppressed at the 1000 copies per milliliter level, as expected
-bio_cong_dat %>% 
-  filter(vlunder200 == 1) # 2,011
-```
-
-    ## # A tibble: 2,121 x 14
-    ##    personid hiv1statusfinal~ aware   art awareselfreport~ arvstatus
-    ##    <chr>    <chr>            <dbl> <dbl>            <dbl>     <dbl>
-    ##  1 SW00000~ 1                    1     1                1         1
-    ##  2 SW00000~ 1                    1     1                1         1
-    ##  3 SW00000~ 1                    1     1                1         1
-    ##  4 SW00000~ 1                    1     1                1         1
-    ##  5 SW00000~ 1                    1     1                1         1
-    ##  6 SW00000~ 1                    1     1                1         1
-    ##  7 SW00000~ 1                    1     1                1         1
-    ##  8 SW00000~ 1                    1     1                1         1
-    ##  9 SW00000~ 1                    1     1                1         1
-    ## 10 SW00000~ 1                    1     1                1         1
-    ## # ... with 2,111 more rows, and 8 more variables: artselfreported <dbl>,
-    ## #   resultvlc <dbl>, vls <dbl>, tri90 <dbl>, tri90aware <dbl>, tri90art <dbl>,
-    ## #   tri90vls <dbl>, vlunder200 <dbl>
-
-``` r
-#This does not make sense to me. This variable is not acting as expected.
-bio_cong_dat %>% 
-  filter(vlunder200 == 1,
-         vls == 2) # 225
-```
-
-    ## # A tibble: 0 x 14
-    ## # ... with 14 variables: personid <chr>, hiv1statusfinalsurvey <chr>,
-    ## #   aware <dbl>, art <dbl>, awareselfreported <dbl>, arvstatus <dbl>,
-    ## #   artselfreported <dbl>, resultvlc <dbl>, vls <dbl>, tri90 <dbl>,
-    ## #   tri90aware <dbl>, tri90art <dbl>, tri90vls <dbl>, vlunder200 <dbl>
+### We cannot test if a person has arvs in their blood nor if they self-report their arv status because they are not asked these questions if the respondent is self-reported unaware
