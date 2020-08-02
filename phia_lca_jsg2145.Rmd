@@ -31,17 +31,33 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 # Read public-release datasets
 #Biomarker dataset
 biomarker <- read_csv(file = "./data/Shims22016adultbio.csv",
-                      col_names = TRUE, col_types = NULL,
-                      locale = default_locale(), na = c("", "NA"), quoted_na = TRUE,
-                      quote = "\"", comment = "", trim_ws = TRUE, skip = 0,
-                      n_max = Inf, progress = show_progress(), skip_empty_rows = TRUE)
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE)
 
 #Individual interview dataset
 individual <- read_csv(file = "./data/Shims22016adultind.csv",
-                       col_names = TRUE, col_types = NULL,
-                       locale = default_locale(), na = c("", "NA"), quoted_na = TRUE,
-                       quote = "\"", comment = "", trim_ws = TRUE, skip = 0,
-                       n_max = Inf, progress = show_progress(), skip_empty_rows = TRUE)
+                       col_names = TRUE, 
+                       col_types = NULL,
+                       locale = default_locale(), 
+                       na = c("", "NA"), 
+                       quoted_na = TRUE,
+                       quote = "\"", 
+                       comment = "", 
+                       trim_ws = TRUE, 
+                       skip = 0,
+                       n_max = Inf, 
+                       progress = show_progress(), 
+                       skip_empty_rows = TRUE)
 ```
 
 ```{r clean data}
@@ -80,6 +96,7 @@ bio_dat <- biomarker %>%
                     "< LLOQ: 400" = "400",
                     "< LLOQ: 839" = "839",
                     "> ULOQ 10000000" = "10000000"),
+         resultvlc = as.numeric(resultvlc),
          vlunder200 = if_else(resultvlc < 200, 1, 2),
          across(.funs = as_factor))
 ```
@@ -207,6 +224,7 @@ bio_cong_dat = biomarker %>%
                     "< LLOQ: 400" = "400",
                     "< LLOQ: 839" = "839",
                     "> ULOQ 10000000" = "10000000"),
+         resultvlc = as.numeric(resultvlc),
          vlunder200 = if_else(resultvlc < 200, 1, 2),
          across(.funs = as_factor))
 ```
@@ -235,6 +253,75 @@ xtabs(~tri90aware + vls, bio_cong_dat)
 # These variables are in agreement
 xtabs(~tri90aware + aware, data = bio_cong_dat)
 
+```
 
+# Differential misclassification
+
+Differential misclassification occurs when misclassification of exposure is not equal between subjects that have or do not have the health outcome, or when misclassification of the health outcome is not equal between exposed and unexposed subjects.
+
+Assume the tri90 classifications represent the truth. It is possible to compare the classifications of respondents using pre-processed measurements (i.e. of blood samples and survey responses) to the "true" values and assess whether the misclassification is differential or non-differential.
+
+```{r}
+# The variable aware is useful here because it mirrors tri90aware, yet it shows that reclassification took place amont those self reported that they were unaware or were missing awareselfreported data. In fact, 59 respondents were reclassified from self-reportedly unaware to aware. None were reclassified from aware to unaware.
+xtabs(~tri90aware + awareselfreported + aware, bio_cong_dat) %>% 
+  ftable(.)
+
+# This table shows that 4 respondents missing artselfreported data were classified as tri90aware who reported that they were aware. These individuals were asked whether they were on art, but the data is missing.
+xtabs(~tri90aware + awareselfreported + artselfreported, bio_cong_dat) %>% 
+  ftable(.)
+
+# Some respondents marked that they were not on art and had no detectable arvs in their blood. All of them were classified as aware. All respondents who responded that they were not aware of their status were recoded as not on art because they were not aware of their status. 
+xtabs(~tri90aware + awareselfreported + tri90art, bio_cong_dat) %>% 
+  ftable(.)
+
+# Of those with viral loads above 200 copies/milliliter, 720 reported that they were aware and were subsequently coded as tri90aware; 16 reported that they were unaware, but were ultimately coded as aware; 250 responded that they were unaware and were coded as unaware. So, 16/986 or 1.6% of those with elevated viral loads were reclassified. On the other hand, of those with suppressed viral loads, 43 reported they were unaware and were subsequently reclassified; 96 reported that they were unaware and found to be unaware. So, of those who self-reported that they were unaware, 96/405 or 24% had viral load under 200 copies/milliliter, and 59/405 or 15% were reclassified as tri90aware. 
+xtabs(~tri90aware + awareselfreported + vlunder200, bio_cong_dat) %>% 
+  ftable(.)
+
+# There was 1 respondent with missing arvstatus information who selfreported that they were unaware and classified as unaware. None of those with missing arvstatus data were reclassified from their self-reported awareness. The same can be said of those who had no detectable arvs in their blood. Only those with detectable arvs were reclassified from unaware to aware.
+xtabs(~tri90aware + awareselfreported + arvstatus, bio_cong_dat) %>% 
+  ftable(.)
+
+# This table shows that there were reclassifications based on vls in each category. 48 respondents were reclassified from self reported unaware to tri90aware who were viral load suppressed (less than 1000 copies/milliliter), while 11 who were not viral load suppressed (less than 1000 copies/milliliter) were also reclassified as tri90aware from self-reported unaware. One respondent who was not viral load suppressed was missing self-reported awareness data, but classified as tri90aware. Of those who were viral load suppressed 48/2242 or 2% were reclassified. Interestingly of those who self-reported that they were unaware, 83/405 or 20% were viral load suppressed (less than 1000 copies/milliliter). This number is smaller than vlunder200 data because missing data was recoded using the detection thresholds of the blood tests meaning that several respondents 
+xtabs(~tri90aware + awareselfreported + vls, bio_cong_dat) %>% 
+  ftable(.)
+
+#This table shows that somehow 230 individuals with viral loads over 1000 copies/milliliter were classified as having viral loads under 200 copies/milliliter
+xtabs(~vlunder200 + vls, bio_dat)
+```
+
+## "vlunder200"
+
+The variable, vlunder200, was coded as ifelse(vlunder200 < 200, 1, 2), however, the variable was still a character when it ran. So, hundreds of observations had been misclassified. It should be fine now.
+
+```{r viral load suppression data}
+bio_dat %>% 
+  mutate(resultvlc = as.numeric(resultvlc, na.rm = TRUE)) %>% 
+  filter(resultvlc < 201) # 2,165
+
+# This doesn't work because the resultvlc hasn't been recoded
+biomarker %>% 
+  filter(hiv1statusfinalsurvey == 1) %>% 
+  mutate(resultvlc = as.numeric(resultvlc, na.rm = TRUE)) %>% 
+  filter(resultvlc < 201) # 392
+
+# This shows 122 more people were viral load suppressed at 1000 copies per milliliter compared to 200 copies per milliliter. This is within the realm of what would be expected.
+bio_dat %>% 
+  filter(vls == 1) # 2,287
+
+bio_cong_dat %>% 
+  filter(vls == 1) # 2,242
+
+bio_cong_dat %>% 
+  filter(resultvlc < 200) # 2,011
+
+#There are still 129 more folks who are virally suppressed at the 1000 copies per milliliter level, as expected
+bio_cong_dat %>% 
+  filter(vlunder200 == 1) # 2,011
+
+#This does not make sense to me. This variable is not acting as expected.
+bio_cong_dat %>% 
+  filter(vlunder200 == 1,
+         vls == 2) # 225
 ```
 
