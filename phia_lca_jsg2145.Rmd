@@ -2,7 +2,7 @@
 title: "phia_lca_jsg2145"
 author: "Jared Garfinkel"
 date: "8/2/2020"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -102,32 +102,6 @@ bio_dat <- biomarker %>%
          across(.funs = as_factor))
 ```
 
-```{r data for lca}
-bio_dat_lca = bio_dat %>% 
-  select(aware,
-         art,
-         awareselfreported, 
-         arvstatus, 
-         artselfreported, 
-         vls, 
-         tri90, 
-         tri90aware, 
-         tri90art, 
-         tri90vls,
-         vlunder200) %>% 
-  mutate(aware = recode(aware, "1" = "0", "2" = "1", "99" = NULL),
-         art = recode(art, "1" = "0", "2" = "1", "99" = NULL),
-         awareselfreported = recode(awareselfreported, "1" = "0", "2" = "1", "99" = NULL),
-         arvstatus = recode(arvstatus, "1" = "0", "2" = "1", "99" = NULL),
-         artselfreported = recode(artselfreported, "1" = "0", "2" = "1", "99" = NULL),
-         vls = recode(vls, "1" = "0", "2" = "1", "99" = NULL),
-         tri90 = recode(tri90, "1" = "0", "2" = "1", "99" = NULL),
-         tri90aware = recode(tri90aware, "1" = "0", "2" = "1", "99" = NULL),
-         tri90art = recode(tri90art, "1" = "0", "2" = "1", "99" = NULL),
-         tri90vls = recode(tri90vls, "1" = "0", "2" = "1", "99" = NULL),
-         vlunder200 = recode(vlunder200, "1" = "0", "2" = "1", "99" = NULL))
-```
-
 ```{r codebook}
 # aware:                1 - Aware or considered aware because ARVs detectable 
 #                       2 - Unaware and ARVs not detectable, or unaware and ARV testing results missing 
@@ -159,6 +133,11 @@ bio_dat_lca = bio_dat %>%
 #                       2 - Self-reported negative 
 #                       3 - Self-reported never tested or never received test result 
 #                       99 - Missing
+# tri90art              1 - ARVs detectable, self-reported on ART, or both ARVs detectable and self-reported on ART 
+#                       2 - ARVs not detectable and self-reported not on ART or missing ARV data and self-reported not on ART 
+#                       3 - Recoded as not on ART (unaware and ARVs not detectable or unaware and ARVs missing) 
+#                       99 - Incomplete Tri90 information
+#
 ```
 
 ## First 90 (awareness)
@@ -320,6 +299,8 @@ Differential misclassification occurs when misclassification of exposure is not 
 Assume the tri90 classifications represent the truth. It is possible to compare the classifications of respondents using pre-processed measurements (i.e. of blood samples and survey responses) to the "true" values and assess whether the misclassification is differential or non-differential.
 
 ```{r}
+nrow(bio_cong_dat) # 2,997
+
 # The variable aware is useful here because it mirrors tri90aware, yet it shows that reclassification took place amont those self reported that they were unaware or were missing awareselfreported data. In fact, 59 respondents were reclassified from self-reportedly unaware to aware. None were reclassified from aware to unaware.
 xtabs(~tri90aware + awareselfreported + aware, bio_cong_dat) %>% 
   ftable(.)
@@ -332,7 +313,7 @@ xtabs(~tri90aware + awareselfreported + artselfreported, bio_cong_dat) %>%
 xtabs(~tri90aware + awareselfreported + tri90art, bio_cong_dat) %>% 
   ftable(.)
 
-# Of those with viral loads above 200 copies/milliliter, 532 reported that they were aware and were subsequently coded as tri90aware; 13 reported that they were unaware, but were ultimately coded as aware; 330 responded that they were unaware and were coded as unaware. So, 13/986 or 1.5% of those with elevated viral loads were reclassified. On the other hand, of those with suppressed viral loads, 46 reported they were unaware and were subsequently reclassified; 16 reported that they were unaware and found to be unaware. So, of those who self-reported that they were unaware, 62/405 or 15% had viral load under 200 copies/milliliter, and 46/405 or 11% were reclassified as tri90aware. 
+# Of those with viral loads above 200 copies/milliliter, 532 reported that they were aware and were subsequently coded as tri90aware; 13 reported that they were unaware, but were ultimately coded as aware; 330 responded that they were unaware and were coded as unaware. So, 13/986 or 1.5% of those with elevated viral loads were reclassified. On the other hand, of those with suppressed viral loads, 46 reported they were unaware and were subsequently reclassified; 16 reported that they were unaware and found to be unaware. So, of those who self-reported that they were unaware, 62/405 or 15% had viral load under 200 copies/milliliter, and 59/405 or 15% were reclassified as tri90aware. Finally, of those who self-reported unaware and who were viral load suppressed, 46/62 or 74% were reclassified as aware.
 xtabs(~tri90aware + awareselfreported + vlunder200, bio_cong_dat) %>% 
   ftable(.)
 
@@ -340,9 +321,28 @@ xtabs(~tri90aware + awareselfreported + vlunder200, bio_cong_dat) %>%
 xtabs(~tri90aware + awareselfreported + arvstatus, bio_cong_dat) %>% 
   ftable(.)
 
-# This table shows that there were reclassifications based on vls in each category. 48 respondents were reclassified from self reported unaware to tri90aware who were viral load suppressed (less than 1000 copies/milliliter), while 11 who were not viral load suppressed (less than 1000 copies/milliliter) were also reclassified as tri90aware from self-reported unaware. One respondent who was not viral load suppressed was missing self-reported awareness data, but classified as tri90aware. Of those who were viral load suppressed 48/2242 or 2% were reclassified. Interestingly of those who self-reported that they were unaware, 83/405 or 20% were viral load suppressed (less than 1000 copies/milliliter). This number is smaller than vlunder200 data because missing data was recoded using the detection thresholds of the blood tests meaning that several respondents 
+# This table shows that there were reclassifications based on vls in each category. 48 respondents were reclassified from self reported unaware to tri90aware who were viral load suppressed (less than 1000 copies/milliliter), while 11 who were not viral load suppressed (less than 1000 copies/milliliter) were also reclassified as tri90aware from self-reported unaware. One respondent who was not viral load suppressed was missing self-reported awareness data, but classified as tri90aware. Of those who were viral load suppressed 48/2242 or 2% were reclassified. Interestingly of those who self-reported that they were unaware, 83/405 or 20% were viral load suppressed (less than 1000 copies/milliliter). Furthermore, of those who were self-reported unaware, 59/405 were ultimately reclassified as aware. Of those who self reported unaware and had suppressed viral loads, 48/83 or 58% were reclassified.
 xtabs(~tri90aware + awareselfreported + vls, bio_cong_dat) %>% 
   ftable(.)
+
+# This table shows that of 59 individuals who self reported unaware, 46 were viral load suppressed (under 200 copies per milliliter) with detectable arvs, and 13 were not viral load suppressed even though they had detectable arvs in their blood. Compare this to 48 viral load suppressed (under 1000 copies per milliliter) with detectable arvs and 11 not viral load suppressed even though they had detectable arvs. No respondents were classified as tri90aware if they did not have detectable arvs and reported that they were unaware. However, 59  respondents who said they were unaware were reclassified. Of those who reported that they were unaware, 59/405 or 15% were ultimately reclassified.
+xtabs(~tri90aware + awareselfreported + vlunder200 + arvstatus, bio_cong_dat) %>% 
+  ftable(., col.vars = c("vlunder200", "arvstatus"))
+
+xtabs(~tri90aware + awareselfreported + vls + arvstatus, bio_cong_dat) %>% 
+  ftable(., col.vars = c("vls", "arvstatus"))
+
+# No respondents who self-reported that they were unaware were asked about art. So, respondents could only be reclassified if they self-reported that they were aware of their status. A respondent could not be reclassified based on self-reported art status if they reported that they were unaware of their hiv status. The variable artselfreported is only therefore capable of telling if someone has said that they are on art when they are on art. More specifically, the artselfreported variable will never reveal whether someone is saying something other than the truth about their awareness of their hiv status, but only what we find out through the arv detection test. If someone has self-reported that they are on arvs, then in every instance they were classified as tri90art. However, if they said they were self-reported not on art, then in 24/306 or 7.8% of cases, they were reclassified as tri90art. If they were missing self-reported art status then in 64/410 or 16% of cases they were classified as tri90art. Otherwise, they were classified as not on art due to missing self-reported data.
+xtabs(~tri90aware + awareselfreported + artselfreported + tri90art, bio_cong_dat) %>% 
+  ftable(., col.vars = c("artselfreported", "tri90art"))
+
+# Of those self-reported on art, 90/2281 or 3.9% of cases had no detectable arvs or were missing data. Of those that self reported not on art, 24/306 or 7.8% had detectable arvs. Of those with missing artselfreported data, 64/410 or 16% had detectable arvs, and 1 respondent was missing arvstatus data. No respondents who self-reported aware and were tri90-unaware were included in this data because a respondent could not be self-reported aware and tri90-unaware based on the processing of the tri90aware variable. There were also no respondents with missing awareselfreported data that were classified as tri90-unaware. 
+xtabs(~tri90aware + awareselfreported + artselfreported + arvstatus, bio_cong_dat) %>% 
+  ftable(., col.vars = c("artselfreported", "arvstatus"))
+
+# 60 respondents who had detectable arvs in their blood were reclassified as tri90aware from self-reported unaware or missing data. If someone did not have detectable arvs in their blood and were self-reported unaware, then they were tri90art-3 and not tri90aware. There were 87/714 or 12% of cases that were classified as on art even if they had no detectable arvs in their blood. Of those missing arvstatus data, 3/4 or 75% were classified as tri90art. These were likely self reported on art and missing arvstatus data. A relatively small number of respondents were missing arvstatus data. Of those with no detectable arvs, 369/714 were classified as tri90aware. Only if a respondent came back negative for arvstatus could they be considered tri90-unaware and only if a respondent was self-reported aware would the arvstatus be ignored when recoding the tri90aware variable. There were no respondents missing awareselfreported data in this dataset. There were no respondents who were missing arvstatus data that self-reported not on art.
+xtabs(~tri90aware + awareselfreported + arvstatus + tri90art, bio_cong_dat) %>% 
+  ftable(., col.vars = c("arvstatus", "tri90art"))
 
 #This table shows that somehow 122 individuals with viral loads under 1000 copies/milliliter were classified as having viral loads over 200 copies/milliliter
 xtabs(~vlunder200 + vls, bio_dat)
@@ -392,4 +392,101 @@ bio_cong_dat %>%
 ## If a person self reports that they are aware and has detectable arvs in their blood, what is the probability of them self-reporting that they are on arvs?
 
 ### We cannot test if a person has arvs in their blood nor if they self-report their arv status because they are not asked these questions if the respondent is self-reported unaware
+
+# lca with pre-processed variables
+
+```{r data for lca}
+bio_dat_lca = bio_dat %>% 
+  select(aware,
+         art,
+         awareselfreported, 
+         arvstatus, 
+         artselfreported, 
+         vls, 
+         tri90, 
+         tri90aware, 
+         tri90art, 
+         tri90vls,
+         vlunder200) %>% 
+  mutate(aware = recode(aware, "1" = "1", "2" = "0", "99" = NULL),
+         art = recode(art, "1" = "1", "2" = "0", "99" = NULL),
+         awareselfreported = recode(awareselfreported, "1" = "1", "2" = "0", "99" = NULL),
+         arvstatus = recode(arvstatus, "1" = "1", "2" = "0", "99" = NULL),
+         artselfreported = recode(artselfreported, "1" = "1", "2" = "0", "99" = NULL),
+         vls = recode(vls, "1" = "1", "2" = "0", "99" = NULL),
+         tri90 = recode(tri90, "1" = "1", "2" = "0", "99" = NULL),
+         tri90aware = recode(tri90aware, "1" = "1", "2" = "0", "99" = NULL),
+         tri90art = recode(tri90art, "1" = "1", "2" = "0", "99" = NULL),
+         tri90vls = recode(tri90vls, "1" = "1", "2" = "0", "99" = NULL),
+         vlunder200 = recode(vlunder200, "1" = "1", "2" = "0", "99" = NULL)) 
+```
+
+```{r lca}
+# full model
+bio_lca_full = bio_dat_lca %>% 
+  select(awareselfreported, arvstatus, vlunder200)
+
+# simple model
+# bio_lca_prep = bio_dat_lca %>%
+#   select(awareselfreported)
+
+set.seed(22)
+bio_lca = randomLCA::randomLCA(bio_lca_full, calcSE = TRUE)
+summary(bio_lca)
+
+outcomeProbs(bio_lca)
+BIC(bio_lca)
+```
+
+```{r nclasses full model, cache = TRUE}
+outcome = NULL
+for (i in 1:10) {
+  outcome[[i]] = bio_dat_lca %>% 
+    randomLCA(., freq=.$freq, nclass = i)
+}
+
+BIC = NULL
+for(i in 1:10) {
+  BIC[[i]] = BIC(outcome[[i]])
+}
+
+bic_data = NULL
+for (i in 1:10) {
+  bic_data[[i]] =  
+    data.frame(nclasses = i,
+               bic = BIC[[i]])
+}
+
+tibble(bic_data) %>% 
+  unnest() %>% 
+  knitr::kable()
+```
+
+# There are NAs in all the observations that are tri90aware == 0.
+
+```{r model choosing, eval = FALSE}
+# assume that tri90aware is the truth
+
+bio_mod_lca = bio_dat_lca %>%
+  mutate(across(.funs = as.numeric)) %>% 
+  na.exclude()
+
+nrow(bio_mod_lca)
+
+bio_mod_lca %>% 
+  group_by(tri90aware) %>% 
+  summarize(sum = n())
+
+bio_unr = bio_dat_lca %>% 
+  filter(tri90aware == "0")
+
+bio_r = bio_dat_lca %>% 
+  filter(tri90aware == "1")
+
+bio_mod = glm(tri90aware ~ . -aware -awareselfreported -tri90 -tri90aware, data = bio_mod_lca, family = poisson)
+
+skimr::skim(bio_cong_dat)
+skimr::skim(bio_mod_lca)
+```
+
 
