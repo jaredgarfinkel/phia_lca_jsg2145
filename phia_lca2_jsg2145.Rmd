@@ -1,0 +1,283 @@
+---
+title: "phia_lca2_jsg2145"
+author: "Jared Garfinkel"
+date: "8/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(randomLCA)
+library(pROC)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+```{r read in data}
+# Read public-release datasets
+#Biomarker dataset
+biomarker <- read_csv(file = "./data/Shims22016adultbio.csv",
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE)
+```
+
+```{r clean data}
+bio_dat <- biomarker %>% 
+  filter(hiv1statusfinalsurvey == 1) %>%
+  select(personid, 
+         hiv1statusfinalsurvey,
+         awareselfreported,
+         gender,
+         arvstatus, 
+         artselfreported, 
+         resultvlc, 
+         vls, 
+         tri90, 
+         tri90aware, 
+         tri90art, 
+         tri90vls) %>%
+  mutate(resultvlc = recode(resultvlc, 
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+         resultvlc = as.numeric(resultvlc),
+         vlunder200 = if_else(resultvlc < 200, 1, 2),
+         across(.funs = as_factor))
+```
+
+```{r}
+str(bio_dat)
+```
+
+
+```{r}
+# aware:                1 - Aware or considered aware because ARVs detectable 
+#                       2 - Unaware and ARVs not detectable, or unaware and ARV testing results missing 
+#                       99 - Missing
+#
+# art:                  1 - ARVs detectable, self-reported on ART, or both ARVs detectable and self-reported on ART 
+#                       2 - Unaware or aware, ARVs not detectable and self-reported not on ART, or aware, missing ARV testing data and self-reported not on ART 
+#                       99 - Missing
+# awareselfreported:    1 - Self-report aware of HIV + status 
+#                       2 - Self-report not aware of HIV + status 
+#                       99 - missing
+# artselfreported:      1 - On ART 
+#                       2 - Not on ART 
+#                       99 - Missing
+# awareartselfreported: 1 - Self-report as not previously diagnosed 
+#                       2 - Self-report as previously diagnosed, not on ART 
+#                       3 - Previously diagnosed, on ART 
+#                       99 - Missing, including incomplete tri90 information
+# arvstatus:            1 - ARV detected 
+#                       2 - ARV not detected 
+#                       99 - Missing
+# resultvlc:            > ULOQ 10000000 - Upper limit of quantification 10000000
+#                       < LLOD - less than lower limit of detection 
+#                       < LLOQ: 839 - less than lower limit of quantification of 839 
+#                       < LLOQ: 400 - less than lower limit of quantification of 400
+#                       < LLOQ: 40 - less than lower limit of quantification of 40 
+#                       < LLOQ: 20 - less than lower limit of quantification of 20
+# hivselfreport:        1 - Self-reported positive 
+#                       2 - Self-reported negative 
+#                       3 - Self-reported never tested or never received test result 
+#                       99 - Missing
+# tri90art              1 - ARVs detectable, self-reported on ART, or both ARVs detectable and self-reported on ART 
+#                       2 - ARVs not detectable and self-reported not on ART or missing ARV data and self-reported not on ART 
+#                       3 - Recoded as not on ART (unaware and ARVs not detectable or unaware and ARVs missing) 
+#                       99 - Incomplete Tri90 information
+#
+```
+
+```{r clean data for lca}
+bio_dat_lca = bio_dat %>% 
+  select(awareselfreported, 
+         arvstatus, 
+         artselfreported, 
+         gender,
+         vls, 
+         tri90, 
+         tri90aware, 
+         tri90art, 
+         tri90vls,
+         vlunder200) %>% 
+  mutate(awareselfreported = recode(awareselfreported, "1" = "1", "2" = "0", "99" = NULL),
+         arvstatus = recode(arvstatus, "1" = "1", "2" = "0", "99" = NULL),
+         artselfreported = recode(artselfreported, "1" = "1", "2" = "0", "99" = NULL),
+         gender = recode(gender, "1" = "1", "2" = "0", "99" = NULL),
+         vls = recode(vls, "1" = "1", "2" = "0", "99" = NULL),
+         tri90 = recode(tri90, "1" = "1", "2" = "0", "99" = NULL),
+         tri90aware = recode(tri90aware, "1" = "1", "2" = "0", "99" = NULL),
+         tri90art = recode(tri90art, "1" = "1", "2" = "0", "99" = NULL),
+         tri90vls = recode(tri90vls, "1" = "1", "2" = "0", "99" = NULL),
+         vlunder200 = recode(vlunder200, "1" = "1", "2" = "0", "99" = NULL))
+```
+
+```{r simplify code}
+bio_dat_lca_full = bio_dat %>% 
+  select(awareselfreported, 
+         arvstatus, 
+         gender,
+         vlunder200) %>% 
+  mutate(across(everything(), ~recode(.x, "1" = "1", "2" = "0", "99" = NULL)))
+```
+
+
+```{r try a function, eval = FALSE}
+bio_dat1 = bio_dat %>% 
+  mutate(awareselfreported = recode(awareselfreported, "1" = "1", "2" = "0", "99" = NULL))
+
+lca_prepper = function(.) {
+  mutate(across(.funs = recode(., "1" = "1", "2" = "0", "99" = NULL))
+}
+```
+
+
+# "Full Model"
+
+```{r}
+# full model
+bio_lca_full = bio_dat_lca %>% 
+  select(awareselfreported, arvstatus, vlunder200)
+
+
+
+set.seed(22)
+bio_lca = randomLCA::randomLCA(bio_lca_full, calcSE = TRUE)
+summary(bio_lca)
+
+probs = outcomeProbs(bio_lca)
+postClassProbs(bio_lca)
+BIC(bio_lca)
+```
+
+```{r}
+diseased <- ifelse(probs[[1]]$Outcome[1] < probs[[2]]$Outcome[1], 2, 1)
+notdiseased <- 3 - diseased
+sens <- apply(probs[[diseased]], 1, function(x)
+  
+  sprintf("%3.2f (%3.2f, %3.2f)", 
+          x[1], 
+          x[2], 
+          x[3])
+)
+spec <- apply(probs[[notdiseased]], 1, function(x)
+  sprintf("%3.2f (%3.2f, %3.2f)", 
+          1 - x[1], 
+          1 - x[3], 
+          1 - x[2])
+)
+
+stable <- data.frame(sens, spec)
+names(stable) <- c("Sensitivity", "Specificity")
+print(stable, row.names = TRUE)
+
+```
+
+```{r stable function}
+stable = function(probs = probs){
+    
+  diseased <- ifelse(probs[[1]]$Outcome[1] < probs[[2]]$Outcome[1], 2, 1)
+  
+  notdiseased <- 3 - diseased
+  
+  sens <- apply(probs[[diseased]], 1, function(x)
+    sprintf("%3.2f (%3.2f, %3.2f)", 
+            x[1], 
+            x[2], 
+            x[3])
+  )
+  
+  spec <- apply(probs[[notdiseased]], 1, function(x)
+    sprintf("%3.2f (%3.2f, %3.2f)", 
+            1 - x[1], 
+            1 - x[3], 
+            1 - x[2])
+  )
+  
+  stable <- data.frame(sens, spec)
+  
+  names(stable) <- c("Sensitivity", "Specificity")
+  
+  return(print(stable, row.names = TRUE))
+}
+
+# stable(probs2)
+```
+
+# "Fuller model"
+
+```{r}
+# full model
+set.seed(22)
+bio_lca_fuller = randomLCA::randomLCA(bio_dat_lca_full, random = FALSE, calcSE = TRUE)
+
+probs_full = outcomeProbs(bio_lca_fuller)
+
+stable(probs_full)
+```
+
+# "Simple Model"
+
+A model of sensitivity and specificity for just one variable should be compared to a true (known) outcome. As such, a contingency table should be sufficient to calculate the sensitivity and specificity of each variable.
+
+## awareselfreported
+
+```{r}
+xtabs(~ awareselfreported + tri90aware, data = bio_dat_lca)
+```
+
+Assuming the final classifications are true for tri90aware, there are 59 false negatives and no false positives. This corresponds to a sensitivity of 2591/2650, or `r round(2591/2650, 3)`, and a specificity of 346/ 346, or 1.00. The prevalance (of awareness of HIV status) is therefore `r round(2650/2996, 3)`. The PPV can be calculated as 2591/2591, or 1.00, and the NPV is 346/405 = `r round(346/405, 3)`.
+
+## arvstatus
+
+```{r}
+xtabs(~ arvstatus + tri90aware, data = bio_dat_lca)
+```
+
+Assuming the final classifications are true for tri90aware, there are 369 false negatives and no false positives. This corresponds to a sensitivity of 2279/2648, or `r round(2279/2648, 3)`, and a specificity of 345/345, or 1.00. The prevalance (of awareness of HIV status) is therefore `r round(2648/2993, 3)`. The PPV can be calculated as 2279/2279, or 1.00, and the NPV is 345/714 = `r round(345/714, 3)`.
+
+## vlunder200
+
+```{r}
+xtabs(~ vlunder200 + tri90aware, data = bio_dat_lca)
+```
+
+Assuming the final classifications are true for tri90aware, there are 546 false negatives and 16 false positives. This corresponds to a sensitivity of 2105/2651, or `r round(2105/2651)`, and a specificity of 330/346, or `r round(330/346, 3)`. The prevalance (of awareness of HIV status) is therefore `r round(2651/2997, 3)`. The PPV can be calculated as 2105/2121, or `r round(2105/2121, 3)`, and the NPV is 330/876 = `r round(330/876, 3)`.
+
+```{r pROC, include = FALSE, eval = FALSE}
+roc(bio_dat$tri90aware, c(bio_dat$awareselfreported, bio_dat$arvstatus, bio_dat$vlunder200), levels = c("aware", "unaware"), data = bio_dat)
+test1 = roc(tri90aware ~ awareselfreported, bio_dat)
+test2 = roc(tri90aware ~ arvstatus, bio_dat)
+roc.test(test1, test2)
+
+roc.test(bio_dat$tri90aware, bio_dat$awareselfreported, bio_dat$arvstatus)
+```
+
+
