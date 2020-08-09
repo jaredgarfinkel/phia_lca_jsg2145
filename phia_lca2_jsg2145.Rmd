@@ -177,7 +177,7 @@ postClassProbs(bio_lca)
 BIC(bio_lca)
 ```
 
-```{r}
+```{r code for sens and spec, results = "hide"}
 diseased <- ifelse(probs[[1]]$Outcome[1] < probs[[2]]$Outcome[1], 2, 1)
 notdiseased <- 3 - diseased
 sens <- apply(probs[[diseased]], 1, function(x)
@@ -271,8 +271,11 @@ xtabs(~ vlunder200 + tri90aware, data = bio_dat_lca)
 
 Assuming the final classifications are true for tri90aware, there are 546 false negatives and 16 false positives. This corresponds to a sensitivity of 2105/2651, or `r round(2105/2651)`, and a specificity of 330/346, or `r round(330/346, 3)`. The prevalance (of awareness of HIV status) is therefore `r round(2651/2997, 3)`. The PPV can be calculated as 2105/2121, or `r round(2105/2121, 3)`, and the NPV is 330/876 = `r round(330/876, 3)`.
 
-```{r pROC, include = FALSE, eval = FALSE}
-roc(bio_dat$tri90aware, c(bio_dat$awareselfreported, bio_dat$arvstatus, bio_dat$vlunder200), levels = c("aware", "unaware"), data = bio_dat)
+# ROC
+
+```{r pROC}
+roc(bio_dat$tri90aware, c(bio_dat$awareselfreported + bio_dat$arvstatus + bio_dat$vlunder200), data = bio_dat) %>% 
+  plot()
 test1 = roc(tri90aware ~ awareselfreported, bio_dat)
 test2 = roc(tri90aware ~ arvstatus, bio_dat)
 roc.test(test1, test2)
