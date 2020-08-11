@@ -2,7 +2,7 @@
 title: "phia_lca2_jsg2145"
 author: "Jared Garfinkel"
 date: "8/9/2020"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
