@@ -197,7 +197,6 @@ spec <- apply(probs[[notdiseased]], 1, function(x)
 stable <- data.frame(sens, spec)
 names(stable) <- c("Sensitivity", "Specificity")
 print(stable, row.names = TRUE)
-
 ```
 
 ```{r stable function}
@@ -282,5 +281,4 @@ roc.test(test1, test2)
 
 roc.test(bio_dat$tri90aware, bio_dat$awareselfreported, bio_dat$arvstatus)
 ```
-
 
