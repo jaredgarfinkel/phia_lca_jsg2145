@@ -71,6 +71,36 @@ bio_dat <- biomarker %>%
          across(.funs = as_factor))
 ```
 
+```{r stable function}
+stable = function(probs = probs){
+    
+  diseased <- ifelse(probs[[1]]$Outcome[1] < probs[[2]]$Outcome[1], 2, 1)
+  
+  notdiseased <- 3 - diseased
+  
+  sens <- apply(probs[[diseased]], 1, function(x)
+    sprintf("%3.2f (%3.2f, %3.2f)", 
+            x[1], 
+            x[2], 
+            x[3])
+  )
+  
+  spec <- apply(probs[[notdiseased]], 1, function(x)
+    sprintf("%3.2f (%3.2f, %3.2f)", 
+            1 - x[1], 
+            1 - x[3], 
+            1 - x[2])
+  )
+  
+  stable <- data.frame(sens, spec)
+  
+  names(stable) <- c("Sensitivity", "Specificity")
+  
+  return(print(stable, row.names = TRUE))
+}
+```
+
+
 ```{r}
 bio_dat_lca = bio_dat %>% 
   mutate(across(everything(), ~recode(.x, "1" = "1", "2" = "0", "99" = NULL)))
@@ -111,7 +141,7 @@ The sensitivity of "tri90aware" is equal to the true positives over the true pos
 ```{r}
 xtabs(~awareselfreported + class, data = bio_dat_out)
 ```
-The sensitivity of "awareselfreported" is equal to the true positives over the true positives and false negatives, 2304/2353, or `r round(2304/2353, 2)`. It describes the chances that if someone is aware that they will be tri90aware. The specificity is the true negatives over the true negatives and false positives, 361/700, or `r round(361/700, 2)`. It describes the chances that if someone is unaware, they will be selfreported unaware. The positive predictive value is the true positives over the true positives and false positives, 2304/2643, or `r round(2304/2643, 2)`. It describes the chances that if someone is selfreported aware that they are in fact aware. The negative predictive value is the true negatives over the true negatives and false negatives, 361/410, or `r round(361/410, 2)`. It describes the chances that if someone is selfreported unaware that they will be unaware.
+The sensitivity of "awareselfreported" is equal to the true positives over the true positives and false negatives, 2304/2353, or `r round(2304/2353, 2)`. It describes the chances that if someone is aware that they will be awareselfreported The specificity is the true negatives over the true negatives and false positives, 361/700, or `r round(361/700, 2)`. It describes the chances that if someone is unaware, they will be selfreported unaware. The positive predictive value is the true positives over the true positives and false positives, 2304/2643, or `r round(2304/2643, 2)`. It describes the chances that if someone is selfreported aware that they are in fact aware. The negative predictive value is the true negatives over the true negatives and false negatives, 361/410, or `r round(361/410, 2)`. It describes the chances that if someone is selfreported unaware that they will be unaware.
 
 ```{r}
 xtabs(~arvstatus + class, data = bio_dat_out)
@@ -123,5 +153,178 @@ The sensitivity of "arvstatus" is equal to the true positives over the true posi
 xtabs(~vlunder200 + class, data = bio_dat_out)
 ```
 
-The sensitivity of "vlunder200" is equal to the true positives over the true positives and false negatives, 2149/2354, or `r round(2149/2354, 2)`. It describes the chances that if someone is aware that they will have suppressed viral load. The specificity is the true negatives over the true negatives and false positives, 685/701, or `r round(685/701, 2)`. It describes the chances that if someone is unaware, they will be viral load suppressed. The positive predictive value is the true positives over the true positives and false positives, 2149/2165, or `r round(2149/2165, 2)`. It describes the chances that if someone is viral load suppressed that they are in fact aware. The negative predictive value is the true negatives over the true negatives and false negatives, 685/890, or `r round(685/890, 2)`. It describes the chances that if someone is not viral load suppressed that they will be unaware.
+The sensitivity of "vlunder200" is equal to the true positives over the true positives and false negatives, 2149/2354, or `r round(2149/2354, 2)`. It describes the chances that if someone is aware that they will have suppressed viral load. The specificity is the true negatives over the true negatives and false positives, 685/701, or `r round(685/701, 2)`. It describes the chances that if someone is unaware, they will not be viral load suppressed. The positive predictive value is the true positives over the true positives and false positives, 2149/2165, or `r round(2149/2165, 2)`. It describes the chances that if someone is viral load suppressed that they are in fact aware. The negative predictive value is the true negatives over the true negatives and false negatives, 685/890, or `r round(685/890, 2)`. It describes the chances that if someone is not viral load suppressed that they will be unaware.
+
+# Second 90
+
+```{r}
+bio_lca_full2 = bio_dat_lca %>% 
+  select(artselfreported, arvstatus, awareselfreported, vlunder200)
+
+set.seed(22)
+bio_lca2 = randomLCA::randomLCA(bio_lca_full2, calcSE = TRUE)
+summary(bio_lca2)
+lca_probs2 = outcomeProbs(bio_lca2)
+```
+
+```{r}
+stable(lca_probs2)
+```
+
+
+```{r}
+lca_out2 = postClassProbs(bio_lca2) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 1, 0))
+```
+
+```{r}
+bio_dat_out2 = bio_dat_lca %>% 
+  select(tri90art, awareselfreported, arvstatus, vlunder200, artselfreported) %>%
+  mutate(across(.fns = as.numeric)) %>% 
+  left_join(lca_out2, copy = TRUE, by = c("awareselfreported", "arvstatus", "vlunder200", "artselfreported"))
+```
+
+```{r}
+xtabs(~tri90art + class, data = bio_dat_out2)
+```
+
+The sensitivity of "tri90art" is equal to the true positives over the true positives and false negatives, 2279/2279, or `r round(2279/2279, 2)`. It describes the chances that if someone is on art that they will be tri90art. The specificity is the true negatives over the true negatives and false positives, 282/372, or `r round(282/372, 2)`. It describes the chances that if someone is not on art, they will be tri90 not on art. The positive predictive value is the true positives over the true positives and false positives, 2279/2369, or `r round(2279/2369, 2)`. It describes the chances that if someone is tri90art that they are in fact on art. The negative predictive value is the true negatives over the true negatives and false negatives, 346/346, or `r round(282/282, 2)`. It describes the chances that if someone is tri90 not on art that they will be not on art.
+
+```{r}
+xtabs(~vlunder200 + class, data = bio_dat_out2)
+```
+
+The sensitivity of "vlunder200" is equal to the true positives over the true positives and false negatives, 2127/2326, or `r round(2127/2326, 2)`. It describes the chances that if someone is on art that they will have suppressed viral load. The specificity is the true negatives over the true negatives and false positives, 691/729, or `r round(691/729, 2)`. It describes the chances that if someone is not on art, they will not be viral load suppressed. The positive predictive value is the true positives over the true positives and false positives, 2127/2165, or `r round(2127/2165, 2)`. It describes the chances that if someone is viral load suppressed that they are in fact on art. The negative predictive value is the true negatives over the true negatives and false negatives, 691/890, or `r round(691/890, 2)`. It describes the chances that if someone is not viral load suppressed that they will be not on art.
+
+```{r}
+xtabs(~awareselfreported + class, data = bio_dat_out2)
+```
+
+The sensitivity of "awareselfreported" is equal to the true positives over the true positives and false negatives, 2276/2325, or `r round(2276/2325, 2)`. It describes the chances that if someone is on art that they will be awareselfreported. The specificity is the true negatives over the true negatives and false positives, 361/728, or `r round(361/728, 2)`. It describes the chances that if someone is not on art, they will be selfreported unaware. The positive predictive value is the true positives over the true positives and false positives, 2276/2643, or `r round(2276/2643, 2)`. It describes the chances that if someone is selfreported aware that they are on art. The negative predictive value is the true negatives over the true negatives and false negatives, 361/410, or `r round(361/410, 2)`. It describes the chances that if someone is selfreported unaware that they will be not on art.
+
+```{r}
+xtabs(~artselfreported + class, data = bio_dat_out2)
+```
+
+The sensitivity of "artselfreported" is equal to the true positives over the true positives and false negatives, 2258/2272, or `r round(2258/2272, 2)`. It describes the chances that if someone is on art that they will be artselfreported. The specificity is the true negatives over the true negatives and false positives, 295/362, or `r round(295/362, 2)`. It describes the chances that if someone is not on art, they will be selfreported not on art The positive predictive value is the true positives over the true positives and false positives, 2258/2325, or `r round(2258/2325, 2)`. It describes the chances that if someone is selfreported on art that they are on art. The negative predictive value is the true negatives over the true negatives and false negatives, 295/309, or `r round(295/309, 2)`. It describes the chances that if someone is selfreported not on art that they will be not on art.
+
+```{r}
+xtabs(~arvstatus + class, data = bio_dat_out2)
+```
+
+The sensitivity of "arvstatus" is equal to the true positives over the true positives and false negatives, 2256/2276, or `r round(2256/2276, 2)`. It describes the chances that if someone is on art that they will have detectable arvs. The specificity is the true negatives over the true negatives and false positives, 700/723, or `r round(700/723, 2)`. It describes the chances that if someone is not on art, they will not have detectable arvs in their blood. The positive predictive value is the true positives over the true positives and false positives, 2256/2279, or `r round(2256/2279, 2)`. It describes the chances that if someone has detectable arvs that they are in fact on art. The negative predictive value is the true negatives over the true negatives and false negatives, 700/720, or `r round(700/720, 2)`. It describes the chances that if someone does not have detectable arvs that they will be not on art.
+
+```{r}
+set.seed(22)
+bio_lca2_rand = randomLCA::randomLCA(bio_lca_full2, random = TRUE, calcSE = TRUE)
+summary(bio_lca2_rand)
+lca_probs2_rand = outcomeProbs(bio_lca2_rand, boot = TRUE, R = 10)
+```
+
+```{r}
+stable(lca_probs2_rand)
+```
+
+```{r}
+lca_out2_rand = postClassProbs(bio_lca2_rand) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 1, 0))
+```
+
+```{r}
+bio_dat_out2_rand = bio_dat_lca %>% 
+  select(tri90art, awareselfreported, arvstatus, vlunder200, artselfreported) %>%
+  mutate(across(.fns = as.numeric)) %>% 
+  left_join(lca_out2_rand, copy = TRUE, by = c("awareselfreported", "arvstatus", "vlunder200", "artselfreported"))
+```
+
+```{r}
+xtabs(~tri90art + class, data = bio_dat_out2_rand)
+```
+
+```{r}
+bio_dat_out2_rand %>% 
+  group_by(tri90art, class) %>% 
+  count()
+```
+
+```{r}
+bio_dat_out %>% 
+  group_by(tri90aware, class) %>% 
+  count()
+```
+ 
+ # Independent Data
+ 
+```{r}
+# Read public-release datasets
+#Biomarker dataset
+independent <- read_csv(file = "./data/Shims22016adultind.csv",
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE) %>% 
+  filter(age > 14,
+         bt_status == 1,
+         hivstatusfinal == 1) %>% 
+  select(known_hiv_status, hivtstever, hivtstrslt)
+```
+
+```{r}
+
+ind_dat_lca = independent %>% 
+  tibble() %>% 
+  mutate(across(.fns = as.numeric),
+         across(everything(), ~recode(.x, "1" = "1", "2" = "0", 
+                                      "99" = NULL, 
+                                      "-8" = NULL, 
+                                      "3" = NULL, 
+                                      "4" = NULL,
+                                      "-9" = NULL))) 
+str(ind_dat_lca)
+```
+
+```{r}
+# full model, ind
+ind_lca_full = ind_dat_lca %>% 
+  select(known_hiv_status, hivtstever, hivtstrslt)
+
+
+
+set.seed(22)
+ind_lca = randomLCA::randomLCA(ind_lca_full, calcSE = TRUE)
+lca_probs_ind = outcomeProbs(ind_lca)
+```
+
+```{r}
+lca_out_ind = postClassProbs(ind_lca) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 0, 1))
+```
+
+```{r}
+ind_dat_out = ind_dat_lca %>% 
+  select(known_hiv_status, hivtstever, hivtstrslt) %>%
+  mutate(across(.fns = as.numeric)) %>% 
+  left_join(lca_out_ind, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt"))
+```
+
+```{r}
+xtabs(~hivtstrslt + class, data = ind_dat_out)
+```
+
+```{r}
+phi = 1 - sp + (se + sp - 1) * theta
+
+c = max(0, a - 1)
+```
 
