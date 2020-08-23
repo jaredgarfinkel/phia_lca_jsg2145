@@ -93,20 +93,20 @@ ind_dat_lca = independent %>%
          across(everything(), ~replace_na(.x, 0)))
 
 # ind_dat_lca
-independent %>% 
-  filter(gender == 1) %>% 
-  nrow()
+# independent %>% 
+#   filter(gender == 1) %>% 
+#   nrow()
 ```
 
 ## suspect zero inflated data in pregnancy related questions (hivpsbp, hivrtpg, hivrslr)
 
-Because the variables hivpsbp, hivrtpg and hivrslr are related to pregnancy, there are `r independent %>% filter(gender == 1) %>% nrow()` respondents who are not asked these questions.
+Because the variables hivpsbp, hivrtpg and hivrslr are related to pregnancy, there are `r independent %>% filter(gender == 1) %>% nrow()` men respondents who are not asked these questions. This is problematic because these patients are not 0s, but ineligible for the outcome. This results in zero-inflated poisson data.
 
 ```{r}
 skimr::skim(ind_dat_lca)
 ```
 
-## lca
+# lca
 
 ```{r}
 set.seed(719)
@@ -157,7 +157,7 @@ ind_w <- read_csv(file = "./data/Shims22016adultind.csv") %>%
   select(known_hiv_status, hivtstever, hivtstrslt, hivpsbp, hivrtpg, hivrslr)
 ```
 
-There are `r ind_w %>% nrow()` in our women only data set.
+There are `r ind_w %>% nrow()` observations in our women only data set.
 
 ```{r}
 ind_dat_w_lca = ind_w %>%
@@ -212,7 +212,7 @@ ind_dat_out_w = ind_dat_w_lca %>%
 xtabs(~hivpsbp + class, data = ind_dat_out_w)
 ```
 
-There were `r ind_dat_out_w %>% filter(hivpsbp == 0, class == 1) %>% nrow()` false negatives. The sensitivity of this test is 346/1816, `r round(346/1816, 2)`, slightly higher, but still practically uninformative.
+#### There were `r ind_dat_out_w %>% filter(hivpsbp == 0, class == 1) %>% nrow()` false negatives in hivpsbp. The sensitivity of this test is 346/1816, `r round(346/1816, 2)`, slightly higher, but still practically uninformative.
 
 ### The same analysis without random effects
 
@@ -235,16 +235,16 @@ xtabs(~hivpsbp + class, data = ind_dat_out_w2)
 
 ## transform the pregnancy variables?
 
-There are three questions related to pregnancy included in this model. 
+### There are three questions related to pregnancy included in this model. 
 
 ```{r}
 pgyes = ind_dat_w_lca %>%
   filter(hivpsbp == 1 | hivrtpg == 1 | hivrslr == 1) # 437 rows
 ```
 
-There are `r pgyes %>% nrow()` patients who had hiv results from one of these three variables. 
+#### There are `r pgyes %>% nrow()` patients who had hiv results from one of these three variables. 
 
-We combine the three variables into one.
+### We combine the three variables into one.
 
 ```{r}
 ind_dat_w_lca2 = ind_dat_w_lca %>% 
@@ -284,7 +284,7 @@ ind_dat_out3 = ind_dat_w_lca2 %>%
 xtabs(~hivpg + class, data = ind_dat_out3)
 ```
 
-There are `r ind_dat_out3 %>% filter(hivpg == 0, class == 1) %>% nrow()` false negatives. The sensitivity is therefore 437/1816, `r round(437/1816, 2)`. Still better, but not useful.
+#### There are `r ind_dat_out3 %>% filter(hivpg == 0, class == 1) %>% nrow()` false negatives. The sensitivity is therefore 437/1816, `r round(437/1816, 2)`. Still better, but not useful.
 
 ## remove the pregnancy variables, add back vlunder200?
 
@@ -304,7 +304,7 @@ full_df_lca = full_df %>%
   select(known_hiv_status, hivtstever, hivtstrslt, vlunder200)
 ```
 
-Our full dataset has `r full_df_lca %>% nrow()` rows and `r full_df_lca %>% ncol()` variables. Three of these variables we keep from our previous model and 1 is added from the biomarker dataset. "vlunder200" is suspected to be a proxy for awareness because most of those who are aware will be on art in Eswatini.
+#### Our full dataset has `r full_df_lca %>% nrow()` rows and `r full_df_lca %>% ncol()` variables. Three of these variables we keep from our previous model and 1 is added from the biomarker dataset. "vlunder200" is suspected to be a proxy for awareness because most of those who are aware will be on art in Eswatini.
 
 ### no random effects
 
@@ -343,7 +343,7 @@ full_dat_out = full_df_lca %>%
 xtabs(~vlunder200 + class, data = full_dat_out)
 ```
 
-There are `r full_dat_out %>% filter(vlunder200 == 0, class == 1) %>% nrow()` false negatives in "vlunder200". The sensitivity is 2059/2593, `r round(2059/2593, 2)`, a significant improvement. Including a 4th variable allows one to use the random effects option of the randomLCA package in R.
+#### There are `r full_dat_out %>% filter(vlunder200 == 0, class == 1) %>% nrow()` false negatives in "vlunder200". The sensitivity is 2059/2593, `r round(2059/2593, 2)`, a significant improvement. Including a 4th variable allows one to use the random effects option of the randomLCA package in R.
 
 ### extract classes without random effects
 

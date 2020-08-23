@@ -422,14 +422,13 @@ independent &lt;- read_csv(file = &quot;./data/Shims22016adultind.csv&quot;) %&g
          across(everything(), ~replace_na(.x, 0)))
 
 # ind_dat_lca
-independent %&gt;% 
-  filter(gender == 1) %&gt;% 
-  nrow()</code></pre>
-<pre><code>## [1] 972</code></pre>
+# independent %&gt;% 
+#   filter(gender == 1) %&gt;% 
+#   nrow()</code></pre>
 </div>
 <div id="suspect-zero-inflated-data-in-pregnancy-related-questions-hivpsbp-hivrtpg-hivrslr" class="section level2">
 <h2>suspect zero inflated data in pregnancy related questions (hivpsbp, hivrtpg, hivrslr)</h2>
-<p>Because the variables hivpsbp, hivrtpg and hivrslr are related to pregnancy, there are 972 respondents who are not asked these questions.</p>
+<p>Because the variables hivpsbp, hivrtpg and hivrslr are related to pregnancy, there are 972 men respondents who are not asked these questions. This is problematic because these patients are not 0s, but ineligible for the outcome. This results in zero-inflated poisson data.</p>
 <pre class="r"><code>skimr::skim(ind_dat_lca)</code></pre>
 <table>
 <caption>Data summary</caption>
@@ -580,8 +579,8 @@ independent %&gt;%
 </tbody>
 </table>
 </div>
-<div id="lca" class="section level2">
-<h2>lca</h2>
+<div id="lca" class="section level1">
+<h1>lca</h1>
 <pre class="r"><code>set.seed(719)
 ind_lca2 = randomLCA::randomLCA(ind_dat_lca, calcSE = TRUE)
 lca_probs_ind2 = outcomeProbs(ind_lca2)</code></pre>
@@ -635,7 +634,7 @@ lca_out_ind = postClassProbs(aware_lca_r) %&gt;%
          hivstatusfinal == 1,
          gender == 2) %&gt;% 
   select(known_hiv_status, hivtstever, hivtstrslt, hivpsbp, hivrtpg, hivrslr)</code></pre>
-<p>There are 2031 in our women only data set.</p>
+<p>There are 2031 observations in our women only data set.</p>
 <pre class="r"><code>ind_dat_w_lca = ind_w %&gt;%
   tibble() %&gt;% 
   mutate(across(.fns = as.numeric),
@@ -827,7 +826,9 @@ lca_out_ind_w = postClassProbs(aware_lca_rw) %&gt;%
 ## hivpsbp    0    1
 ##       0  215 1470
 ##       1    0  346</code></pre>
-<p>There were 1470 false negatives. The sensitivity of this test is 346/1816, 0.19, slightly higher, but still practically uninformative.</p>
+<div id="there-were-1470-false-negatives-in-hivpsbp.-the-sensitivity-of-this-test-is-3461816-0.19-slightly-higher-but-still-practically-uninformative." class="section level4">
+<h4>There were 1470 false negatives in hivpsbp. The sensitivity of this test is 346/1816, 0.19, slightly higher, but still practically uninformative.</h4>
+</div>
 </div>
 <div id="the-same-analysis-without-random-effects" class="section level3">
 <h3>The same analysis without random effects</h3>
@@ -846,11 +847,16 @@ lca_out_ind_w2 = postClassProbs(ind_lca2w) %&gt;%
 </div>
 <div id="transform-the-pregnancy-variables" class="section level2">
 <h2>transform the pregnancy variables?</h2>
-<p>There are three questions related to pregnancy included in this model.</p>
+<div id="there-are-three-questions-related-to-pregnancy-included-in-this-model." class="section level3">
+<h3>There are three questions related to pregnancy included in this model.</h3>
 <pre class="r"><code>pgyes = ind_dat_w_lca %&gt;%
   filter(hivpsbp == 1 | hivrtpg == 1 | hivrslr == 1) # 437 rows</code></pre>
-<p>There are 437 patients who had hiv results from one of these three variables.</p>
-<p>We combine the three variables into one.</p>
+<div id="there-are-437-patients-who-had-hiv-results-from-one-of-these-three-variables." class="section level4">
+<h4>There are 437 patients who had hiv results from one of these three variables.</h4>
+</div>
+</div>
+<div id="we-combine-the-three-variables-into-one." class="section level3">
+<h3>We combine the three variables into one.</h3>
 <pre class="r"><code>ind_dat_w_lca2 = ind_dat_w_lca %&gt;% 
   mutate(hivpg = if_else(hivpsbp == 1 | hivrtpg == 1 | hivrslr == 1, 1, 0)) %&gt;% 
   select(-hivpsbp, -hivrtpg, -hivrslr)</code></pre>
@@ -874,6 +880,7 @@ lca_probs_r3</code></pre>
 ## hivtstever       0.9994480 0.4996814 0.9999921
 ## hivtstrslt       0.9955933 0.8685787 0.9996058
 ## hivpg            0.2406393 0.2190586 0.2615708</code></pre>
+</div>
 <div id="extract-classes-2" class="section level3">
 <h3>extract classes</h3>
 <pre class="r"><code>set.seed(719)
@@ -887,7 +894,9 @@ lca_out_ind3 = postClassProbs(aware_lca_r3) %&gt;%
 ## hivpg    0    1
 ##     0  215 1379
 ##     1    0  437</code></pre>
-<p>There are 1379 false negatives. The sensitivity is therefore 437/1816, 0.24. Still better, but not useful.</p>
+<div id="there-are-1379-false-negatives.-the-sensitivity-is-therefore-4371816-0.24.-still-better-but-not-useful." class="section level4">
+<h4>There are 1379 false negatives. The sensitivity is therefore 437/1816, 0.24. Still better, but not useful.</h4>
+</div>
 </div>
 </div>
 <div id="remove-the-pregnancy-variables-add-back-vlunder200" class="section level2">
@@ -905,7 +914,9 @@ full_df_lca = full_df %&gt;%
                                     &quot;-9&quot; = 0)),
        across(everything(), ~replace_na(.x, 0))) %&gt;% 
   select(known_hiv_status, hivtstever, hivtstrslt, vlunder200)</code></pre>
-<p>Our full dataset has 3055 rows and 4 variables. Three of these variables we keep from our previous model and 1 is added from the biomarker dataset. “vlunder200” is suspected to be a proxy for awareness because most of those who are aware will be on art in Eswatini.</p>
+<div id="our-full-dataset-has-3055-rows-and-4-variables.-three-of-these-variables-we-keep-from-our-previous-model-and-1-is-added-from-the-biomarker-dataset.-vlunder200-is-suspected-to-be-a-proxy-for-awareness-because-most-of-those-who-are-aware-will-be-on-art-in-eswatini." class="section level4">
+<h4>Our full dataset has 3055 rows and 4 variables. Three of these variables we keep from our previous model and 1 is added from the biomarker dataset. “vlunder200” is suspected to be a proxy for awareness because most of those who are aware will be on art in Eswatini.</h4>
+</div>
 <div id="no-random-effects" class="section level3">
 <h3>no random effects</h3>
 <pre class="r"><code>set.seed(719)
@@ -945,7 +956,9 @@ lca_out_full = postClassProbs(aware_lca_full) %&gt;%
 ## vlunder200    0    1
 ##          0  356  534
 ##          1  106 2059</code></pre>
-<p>There are 534 false negatives in “vlunder200”. The sensitivity is 2059/2593, 0.79, a significant improvement. Including a 4th variable allows one to use the random effects option of the randomLCA package in R.</p>
+<div id="there-are-534-false-negatives-in-vlunder200.-the-sensitivity-is-20592593-0.79-a-significant-improvement.-including-a-4th-variable-allows-one-to-use-the-random-effects-option-of-the-randomlca-package-in-r." class="section level4">
+<h4>There are 534 false negatives in “vlunder200”. The sensitivity is 2059/2593, 0.79, a significant improvement. Including a 4th variable allows one to use the random effects option of the randomLCA package in R.</h4>
+</div>
 </div>
 <div id="extract-classes-without-random-effects" class="section level3">
 <h3>extract classes without random effects</h3>
