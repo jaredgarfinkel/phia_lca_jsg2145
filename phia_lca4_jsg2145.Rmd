@@ -1,0 +1,364 @@
+---
+title: "phia_lca4_jsg2145"
+author: "Jared Garfinkel"
+date: "8/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(randomLCA)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+## read in data
+
+```{r}
+biomarker <- read_csv(file = "./data/Shims22016adultbio.csv",
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE)
+```
+
+```{r}
+bio_dat <- biomarker %>% 
+  filter(hiv1statusfinalsurvey == 1) %>%
+  select(personid, 
+         resultvlc) %>%
+  mutate(resultvlc = recode(resultvlc, 
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+         resultvlc = as.numeric(resultvlc),
+         vlunder200 = if_else(resultvlc < 200, 1, 2),
+         across(.funs = as_factor))
+```
+
+The biomarker data set is `r nrow(bio_dat)` observations of `r ncol(bio_dat)` variables, "personid", "resultvlc", and "vlunder200".
+
+It was filtered on hiv1statusfinalsurvey = 1.
+
+```{r}
+# Read public-release datasets
+# Independent dataset
+# hivstatusfinal not filtered
+independent <- read_csv(file = "./data/Shims22016adultind.csv") %>% 
+  filter(age > 14,
+         bt_status == 1,
+         hivstatusfinal == 1) 
+```
+
+After including only those who are 15 years old and over who had a blood test and were HIV+, the independent data set is `r nrow(independent)` observations of `r ncol(independent)` variables. We select only those related to the coding of "awareselfreported" variable and "personid."
+
+```{r}
+ind_dat_lca = independent %>%
+  select(personid, known_hiv_status, hivtstever, hivtstrslt, hivpsbp, hivrtpg, hivrslr) %>% 
+  tibble() %>% 
+  mutate(across(.fns = as.numeric),
+         across(everything(), ~recode(.x, "1" = 1, 
+                                      "2" = 0, 
+                                      "99" = 0, 
+                                      "-8" = 0, 
+                                      "3" = 0, 
+                                      "4" = 0,
+                                      "-9" = 0)),
+         across(everything(), ~replace_na(.x, 0)))
+
+# ind_dat_lca
+independent %>% 
+  filter(gender == 1) %>% 
+  nrow()
+```
+
+## suspect zero inflated data in pregnancy related questions (hivpsbp, hivrtpg, hivrslr)
+
+Because the variables hivpsbp, hivrtpg and hivrslr are related to pregnancy, there are `r independent %>% filter(gender == 1) %>% nrow()` respondents who are not asked these questions.
+
+```{r}
+skimr::skim(ind_dat_lca)
+```
+
+## lca
+
+```{r}
+set.seed(719)
+ind_lca2 = randomLCA::randomLCA(ind_dat_lca, calcSE = TRUE)
+lca_probs_ind2 = outcomeProbs(ind_lca2)
+```
+
+```{r}
+set.seed(719)
+aware_lca_r = randomLCA::randomLCA(ind_dat_lca, random = TRUE, calcSE = TRUE)
+lca_probs_r = outcomeProbs(aware_lca_r, boot = TRUE)
+# summary(aware_lca_r)
+lca_probs_r
+```
+
+### extract classes
+
+```{r}
+set.seed(719)
+lca_out_ind = postClassProbs(aware_lca_r) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 1, 0))
+```
+
+```{r}
+ind_dat_out = ind_dat_lca %>% 
+  left_join(lca_out_ind, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt", "hivpsbp", "hivrtpg", "hivrslr"))
+```
+
+```{r}
+xtabs(~hivpsbp + class, data = ind_dat_out)
+```
+
+There are `r ind_dat_out %>% filter(hivpsbp == 0, class == 1) %>% nrow()` false negatives in the hivpsbp variable. The sensitivity is therefore 346/2596, `r round(346/2596, 2)`.
+
+# dealing with zero-inflated poisson data
+
+## filter for women only??
+
+This data only include women to reduce the zero inflation given that more women will have been asked about pregnancy. However, only a fraction of women have been pregnant.
+
+```{r}
+ind_w <- read_csv(file = "./data/Shims22016adultind.csv") %>% 
+  filter(age > 14,
+         bt_status == 1,
+         hivstatusfinal == 1,
+         gender == 2) %>% 
+  select(known_hiv_status, hivtstever, hivtstrslt, hivpsbp, hivrtpg, hivrslr)
+```
+
+There are `r ind_w %>% nrow()` in our women only data set.
+
+```{r}
+ind_dat_w_lca = ind_w %>%
+  tibble() %>% 
+  mutate(across(.fns = as.numeric),
+         across(everything(), ~recode(.x, "1" = 1, 
+                                      "2" = 0, 
+                                      "99" = 0, 
+                                      "-8" = 0, 
+                                      "3" = 0, 
+                                      "4" = 0,
+                                      "-9" = 0)),
+         across(everything(), ~replace_na(.x, 0)))
+
+skimr::skim(ind_dat_w_lca)
+```
+
+### run LCA without random effects
+
+```{r}
+set.seed(719)
+ind_lca2w = randomLCA::randomLCA(ind_dat_w_lca, calcSE = TRUE)
+lca_probs_ind2w = outcomeProbs(ind_lca2w)
+```
+
+### add random effects
+
+```{r}
+set.seed(719)
+aware_lca_rw = randomLCA::randomLCA(ind_dat_w_lca, random = TRUE, calcSE = TRUE)
+lca_probs_rw = outcomeProbs(aware_lca_rw, boot = TRUE)
+# summary(aware_lca_r)
+lca_probs_rw
+```
+
+
+### extract classes
+
+```{r}
+set.seed(719)
+lca_out_ind_w = postClassProbs(aware_lca_rw) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 1, 0))
+```
+
+```{r}
+ind_dat_out_w = ind_dat_w_lca %>% 
+  left_join(lca_out_ind_w, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt", "hivpsbp", "hivrtpg", "hivrslr"))
+```
+
+```{r}
+xtabs(~hivpsbp + class, data = ind_dat_out_w)
+```
+
+There were `r ind_dat_out_w %>% filter(hivpsbp == 0, class == 1) %>% nrow()` false negatives. The sensitivity of this test is 346/1816, `r round(346/1816, 2)`, slightly higher, but still practically uninformative.
+
+### The same analysis without random effects
+
+```{r}
+set.seed(719)
+lca_out_ind_w2 = postClassProbs(ind_lca2w) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 1, 0))
+```
+
+```{r}
+ind_dat_out_w2 = ind_dat_w_lca %>% 
+  left_join(lca_out_ind_w2, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt", "hivpsbp", "hivrtpg", "hivrslr"))
+```
+
+```{r}
+xtabs(~hivpsbp + class, data = ind_dat_out_w2)
+```
+
+
+## transform the pregnancy variables?
+
+There are three questions related to pregnancy included in this model. 
+
+```{r}
+pgyes = ind_dat_w_lca %>%
+  filter(hivpsbp == 1 | hivrtpg == 1 | hivrslr == 1) # 437 rows
+```
+
+There are `r pgyes %>% nrow()` patients who had hiv results from one of these three variables. 
+
+We combine the three variables into one.
+
+```{r}
+ind_dat_w_lca2 = ind_dat_w_lca %>% 
+  mutate(hivpg = if_else(hivpsbp == 1 | hivrtpg == 1 | hivrslr == 1, 1, 0)) %>% 
+  select(-hivpsbp, -hivrtpg, -hivrslr)
+```
+
+```{r}
+set.seed(719)
+ind_lca3 = randomLCA::randomLCA(ind_dat_w_lca2, calcSE = TRUE)
+lca_probs_ind3 = outcomeProbs(ind_lca3)
+```
+
+```{r}
+set.seed(719)
+aware_lca_r3 = randomLCA::randomLCA(ind_dat_w_lca2, random = TRUE, calcSE = TRUE)
+lca_probs_r3 = outcomeProbs(aware_lca_r3, boot = TRUE)
+# summary(aware_lca_r)
+lca_probs_r3
+```
+
+### extract classes
+
+```{r}
+set.seed(719)
+lca_out_ind3 = postClassProbs(aware_lca_r3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 0, 1))
+```
+
+```{r}
+ind_dat_out3 = ind_dat_w_lca2 %>% 
+  left_join(lca_out_ind3, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt", "hivpg"))
+```
+
+```{r}
+xtabs(~hivpg + class, data = ind_dat_out3)
+```
+
+There are `r ind_dat_out3 %>% filter(hivpg == 0, class == 1) %>% nrow()` false negatives. The sensitivity is therefore 437/1816, `r round(437/1816, 2)`. Still better, but not useful.
+
+## remove the pregnancy variables, add back vlunder200?
+
+```{r}
+full_df = left_join(bio_dat, independent, by = "personid")
+
+full_df_lca = full_df %>% 
+  mutate(across(.fns = as.numeric),
+       across(everything(), ~recode(.x, "1" = 1, 
+                                    "2" = 0, 
+                                    "99" = 0, 
+                                    "-8" = 0, 
+                                    "3" = 0, 
+                                    "4" = 0,
+                                    "-9" = 0)),
+       across(everything(), ~replace_na(.x, 0))) %>% 
+  select(known_hiv_status, hivtstever, hivtstrslt, vlunder200)
+```
+
+Our full dataset has `r full_df_lca %>% nrow()` rows and `r full_df_lca %>% ncol()` variables. Three of these variables we keep from our previous model and 1 is added from the biomarker dataset. "vlunder200" is suspected to be a proxy for awareness because most of those who are aware will be on art in Eswatini.
+
+### no random effects
+
+```{r}
+set.seed(719)
+expanded_lca = randomLCA::randomLCA(full_df_lca, calcSE = TRUE)
+lca_probs_ind2w = outcomeProbs(expanded_lca)
+```
+
+### include random effects
+
+```{r}
+set.seed(719)
+aware_lca_full = randomLCA::randomLCA(full_df_lca, random = TRUE, calcSE = TRUE)
+lca_probs_full = outcomeProbs(aware_lca_full, boot = TRUE)
+# summary(aware_lca_r)
+lca_probs_full
+```
+
+
+### extract classes
+
+```{r}
+set.seed(719)
+lca_out_full = postClassProbs(aware_lca_full) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 0, 1))
+```
+
+```{r}
+full_dat_out = full_df_lca %>% 
+  left_join(lca_out_full, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt", "vlunder200"))
+```
+
+```{r}
+xtabs(~vlunder200 + class, data = full_dat_out)
+```
+
+There are `r full_dat_out %>% filter(vlunder200 == 0, class == 1) %>% nrow()` false negatives in "vlunder200". The sensitivity is 2059/2593, `r round(2059/2593, 2)`, a significant improvement. Including a 4th variable allows one to use the random effects option of the randomLCA package in R.
+
+### extract classes without random effects
+
+```{r}
+set.seed(719)
+lca_out_exp = postClassProbs(expanded_lca) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 0, 1))
+```
+
+```{r}
+exp_dat_out = full_df_lca %>% 
+  left_join(lca_out_exp, copy = TRUE, by = c("known_hiv_status", "hivtstever", "hivtstrslt", "vlunder200"))
+```
+
+```{r}
+xtabs(~vlunder200 + class, data = exp_dat_out)
+```
