@@ -1,0 +1,773 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode=true}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provides euro and other symbols
+\else % if luatex or xelatex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={phia\_lca4\_jsg2145},
+  pdfauthor={Jared Garfinkel},
+  hidelinks,
+}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs}
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx,grffile}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+
+
+\title{phia\_lca4\_jsg2145}
+\author{Jared Garfinkel}
+\date{8/21/2020}
+
+\begin{document}
+\maketitle
+
+\hypertarget{read-in-data}{%
+\subsection{read in data}\label{read-in-data}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{biomarker <-}\StringTok{ }\KeywordTok{read_csv}\NormalTok{(}\DataTypeTok{file =} \StringTok{"./data/Shims22016adultbio.csv"}\NormalTok{,}
+                      \DataTypeTok{col_names =} \OtherTok{TRUE}\NormalTok{, }
+                      \DataTypeTok{col_types =} \OtherTok{NULL}\NormalTok{,}
+                      \DataTypeTok{locale =} \KeywordTok{default_locale}\NormalTok{(), }
+                      \DataTypeTok{na =} \KeywordTok{c}\NormalTok{(}\StringTok{""}\NormalTok{, }\StringTok{"NA"}\NormalTok{), }
+                      \DataTypeTok{quoted_na =} \OtherTok{TRUE}\NormalTok{,}
+                      \DataTypeTok{quote =} \StringTok{"}\CharTok{\textbackslash{}"}\StringTok{"}\NormalTok{, }
+                      \DataTypeTok{comment =} \StringTok{""}\NormalTok{, }
+                      \DataTypeTok{trim_ws =} \OtherTok{TRUE}\NormalTok{, }
+                      \DataTypeTok{skip =} \DecValTok{0}\NormalTok{,}
+                      \DataTypeTok{n_max =} \OtherTok{Inf}\NormalTok{, }
+                      \DataTypeTok{progress =} \KeywordTok{show_progress}\NormalTok{(), }
+                      \DataTypeTok{skip_empty_rows =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{bio_dat <-}\StringTok{ }\NormalTok{biomarker }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(hiv1statusfinalsurvey }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{select}\NormalTok{(personid, }
+\NormalTok{         resultvlc) }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{resultvlc =} \KeywordTok{recode}\NormalTok{(resultvlc, }
+                    \StringTok{"< LLOD"}\NormalTok{ =}\StringTok{ "1"}\NormalTok{,}
+                    \StringTok{"< LLOQ: 20"}\NormalTok{ =}\StringTok{ "20"}\NormalTok{,}
+                    \StringTok{"< LLOQ: 40"}\NormalTok{ =}\StringTok{ "40"}\NormalTok{,}
+                    \StringTok{"< LLOQ: 400"}\NormalTok{ =}\StringTok{ "400"}\NormalTok{,}
+                    \StringTok{"< LLOQ: 839"}\NormalTok{ =}\StringTok{ "839"}\NormalTok{,}
+                    \StringTok{"> ULOQ 10000000"}\NormalTok{ =}\StringTok{ "10000000"}\NormalTok{),}
+         \DataTypeTok{resultvlc =} \KeywordTok{as.numeric}\NormalTok{(resultvlc),}
+         \DataTypeTok{vlunder200 =} \KeywordTok{if_else}\NormalTok{(resultvlc }\OperatorTok{<}\StringTok{ }\DecValTok{200}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{2}\NormalTok{),}
+         \KeywordTok{across}\NormalTok{(}\DataTypeTok{.funs =}\NormalTok{ as_factor))}
+\end{Highlighting}
+\end{Shaded}
+
+The biomarker data set is 3055 observations of 3 variables,
+``personid'', ``resultvlc'', and ``vlunder200''.
+
+It was filtered on hiv1statusfinalsurvey = 1.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Read public-release datasets}
+\CommentTok{# Independent dataset}
+\CommentTok{# hivstatusfinal not filtered}
+\NormalTok{independent <-}\StringTok{ }\KeywordTok{read_csv}\NormalTok{(}\DataTypeTok{file =} \StringTok{"./data/Shims22016adultind.csv"}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(age }\OperatorTok{>}\StringTok{ }\DecValTok{14}\NormalTok{,}
+\NormalTok{         bt_status }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{,}
+\NormalTok{         hivstatusfinal }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+After including only those who are 15 years old and over who had a blood
+test and were HIV+, the independent data set is 3003 observations of 750
+variables. We select only those related to the coding of
+``awareselfreported'' variable and ``personid.''
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_lca =}\StringTok{ }\NormalTok{independent }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{select}\NormalTok{(personid, known_hiv_status, hivtstever, hivtstrslt, hivpsbp, hivrtpg, hivrslr) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{tibble}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\KeywordTok{across}\NormalTok{(}\DataTypeTok{.fns =}\NormalTok{ as.numeric),}
+         \KeywordTok{across}\NormalTok{(}\KeywordTok{everything}\NormalTok{(), }\OperatorTok{~}\KeywordTok{recode}\NormalTok{(.x, }\StringTok{"1"}\NormalTok{ =}\StringTok{ }\DecValTok{1}\NormalTok{, }
+                                      \StringTok{"2"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"99"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"-8"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"3"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"4"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{,}
+                                      \StringTok{"-9"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{)),}
+         \KeywordTok{across}\NormalTok{(}\KeywordTok{everything}\NormalTok{(), }\OperatorTok{~}\KeywordTok{replace_na}\NormalTok{(.x, }\DecValTok{0}\NormalTok{)))}
+
+\CommentTok{# ind_dat_lca}
+\CommentTok{# independent %>% }
+\CommentTok{#   filter(gender == 1) %>% }
+\CommentTok{#   nrow()}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{suspect-zero-inflated-data-in-pregnancy-related-questions-hivpsbp-hivrtpg-hivrslr}{%
+\subsection{suspect zero inflated data in pregnancy related questions
+(hivpsbp, hivrtpg,
+hivrslr)}\label{suspect-zero-inflated-data-in-pregnancy-related-questions-hivpsbp-hivrtpg-hivrslr}}
+
+Because the variables hivpsbp, hivrtpg and hivrslr are related to
+pregnancy, there are 972 men respondents who are not asked these
+questions. This is problematic because these patients are not 0s, but
+ineligible for the outcome. This results in zero-inflated poisson data.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim}\NormalTok{(ind_dat_lca)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}ll@{}}
+\caption{Data summary}\tabularnewline
+\toprule
+\endhead
+Name & ind\_dat\_lca\tabularnewline
+Number of rows & 3003\tabularnewline
+Number of columns & 7\tabularnewline
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ &\tabularnewline
+Column type frequency: &\tabularnewline
+numeric & 7\tabularnewline
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ &\tabularnewline
+Group variables & None\tabularnewline
+\bottomrule
+\end{longtable}
+
+\textbf{Variable type: numeric}
+
+\begin{longtable}[]{@{}lrrrrrrrrrl@{}}
+\toprule
+skim\_variable & n\_missing & complete\_rate & mean & sd & p0 & p25 &
+p50 & p75 & p100 & hist\tabularnewline
+\midrule
+\endhead
+personid & 0 & 1 & 0.00 & 0.00 & 0 & 0 & 0 & 0 & 0 &
+▁▁▇▁▁\tabularnewline
+known\_hiv\_status & 0 & 1 & 0.86 & 0.34 & 0 & 1 & 1 & 1 & 1 &
+▁▁▁▁▇\tabularnewline
+hivtstever & 0 & 1 & 0.97 & 0.16 & 0 & 1 & 1 & 1 & 1 &
+▁▁▁▁▇\tabularnewline
+hivtstrslt & 0 & 1 & 0.86 & 0.35 & 0 & 1 & 1 & 1 & 1 &
+▁▁▁▁▇\tabularnewline
+hivpsbp & 0 & 1 & 0.12 & 0.32 & 0 & 0 & 0 & 0 & 1 & ▇▁▁▁▁\tabularnewline
+hivrtpg & 0 & 1 & 0.03 & 0.17 & 0 & 0 & 0 & 0 & 1 & ▇▁▁▁▁\tabularnewline
+hivrslr & 0 & 1 & 0.00 & 0.02 & 0 & 0 & 0 & 0 & 1 & ▇▁▁▁▁\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{lca}{%
+\section{lca}\label{lca}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{ind_lca2 =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(ind_dat_lca, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_ind2 =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(ind_lca2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{aware_lca_r =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(ind_dat_lca, }\DataTypeTok{random =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_r =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(aware_lca_r, }\DataTypeTok{boot =} \OtherTok{TRUE}\NormalTok{)}
+\CommentTok{# summary(aware_lca_r)}
+\NormalTok{lca_probs_r}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Class  1 
+##                     Outcome p        2.5 %       97.5 %
+## personid         9.664293e-07 4.112092e-07 2.188224e-06
+## known_hiv_status 9.999990e-01 9.999979e-01 9.999996e-01
+## hivtstever       9.996138e-01 3.477012e-01 9.999922e-01
+## hivtstrslt       9.969173e-01 9.887489e-01 9.988466e-01
+## hivpsbp          1.332827e-01 1.219336e-01 1.466603e-01
+## hivrtpg          3.466934e-02 2.836531e-02 4.265535e-02
+## hivrslr          3.861506e-04 6.722377e-06 3.665570e-01
+## Class  2 
+##                     Outcome p        2.5 %       97.5 %
+## personid         6.129686e-06 5.525539e-06 6.657598e-06
+## known_hiv_status 6.144217e-06 4.897194e-08 1.123715e-05
+## hivtstever       8.034360e-01 7.648350e-01 8.361495e-01
+## hivtstrslt       6.129789e-06 3.295263e-06 1.069449e-05
+## hivpsbp          6.144143e-06 5.551027e-06 6.688241e-06
+## hivrtpg          6.129685e-06 2.526507e-06 1.370821e-05
+## hivrslr          6.129685e-06 2.563470e-06 1.351162e-05
+\end{verbatim}
+
+\hypertarget{extract-classes}{%
+\subsubsection{extract classes}\label{extract-classes}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{lca_out_ind =}\StringTok{ }\KeywordTok{postClassProbs}\NormalTok{(aware_lca_r) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\NormalTok{janitor}\OperatorTok{::}\KeywordTok{clean_names}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{class =} \KeywordTok{if_else}\NormalTok{(class_}\DecValTok{1} \OperatorTok{>}\StringTok{ }\NormalTok{class_}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_out =}\StringTok{ }\NormalTok{ind_dat_lca }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(lca_out_ind, }\DataTypeTok{copy =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{"known_hiv_status"}\NormalTok{, }\StringTok{"hivtstever"}\NormalTok{, }\StringTok{"hivtstrslt"}\NormalTok{, }\StringTok{"hivpsbp"}\NormalTok{, }\StringTok{"hivrtpg"}\NormalTok{, }\StringTok{"hivrslr"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{xtabs}\NormalTok{(}\OperatorTok{~}\NormalTok{hivpsbp }\OperatorTok{+}\StringTok{ }\NormalTok{class, }\DataTypeTok{data =}\NormalTok{ ind_dat_out)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##        class
+## hivpsbp    0    1
+##       0  407 2250
+##       1    0  346
+\end{verbatim}
+
+There are 2250 false negatives in the hivpsbp variable. The sensitivity
+is therefore 346/2596, 0.13.
+
+\hypertarget{dealing-with-zero-inflated-poisson-data}{%
+\section{dealing with zero-inflated poisson
+data}\label{dealing-with-zero-inflated-poisson-data}}
+
+\hypertarget{filter-for-women-only}{%
+\subsection{filter for women only??}\label{filter-for-women-only}}
+
+This data only include women to reduce the zero inflation given that
+more women will have been asked about pregnancy. However, only a
+fraction of women have been pregnant.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_w <-}\StringTok{ }\KeywordTok{read_csv}\NormalTok{(}\DataTypeTok{file =} \StringTok{"./data/Shims22016adultind.csv"}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{filter}\NormalTok{(age }\OperatorTok{>}\StringTok{ }\DecValTok{14}\NormalTok{,}
+\NormalTok{         bt_status }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{,}
+\NormalTok{         hivstatusfinal }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{,}
+\NormalTok{         gender }\OperatorTok{==}\StringTok{ }\DecValTok{2}\NormalTok{) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(known_hiv_status, hivtstever, hivtstrslt, hivpsbp, hivrtpg, hivrslr)}
+\end{Highlighting}
+\end{Shaded}
+
+There are 2031 observations in our women only data set.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_w_lca =}\StringTok{ }\NormalTok{ind_w }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{tibble}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\KeywordTok{across}\NormalTok{(}\DataTypeTok{.fns =}\NormalTok{ as.numeric),}
+         \KeywordTok{across}\NormalTok{(}\KeywordTok{everything}\NormalTok{(), }\OperatorTok{~}\KeywordTok{recode}\NormalTok{(.x, }\StringTok{"1"}\NormalTok{ =}\StringTok{ }\DecValTok{1}\NormalTok{, }
+                                      \StringTok{"2"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"99"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"-8"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"3"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                      \StringTok{"4"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{,}
+                                      \StringTok{"-9"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{)),}
+         \KeywordTok{across}\NormalTok{(}\KeywordTok{everything}\NormalTok{(), }\OperatorTok{~}\KeywordTok{replace_na}\NormalTok{(.x, }\DecValTok{0}\NormalTok{)))}
+
+\NormalTok{skimr}\OperatorTok{::}\KeywordTok{skim}\NormalTok{(ind_dat_w_lca)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}ll@{}}
+\caption{Data summary}\tabularnewline
+\toprule
+\endhead
+Name & ind\_dat\_w\_lca\tabularnewline
+Number of rows & 2031\tabularnewline
+Number of columns & 6\tabularnewline
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ &\tabularnewline
+Column type frequency: &\tabularnewline
+numeric & 6\tabularnewline
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ &\tabularnewline
+Group variables & None\tabularnewline
+\bottomrule
+\end{longtable}
+
+\textbf{Variable type: numeric}
+
+\begin{longtable}[]{@{}lrrrrrrrrrl@{}}
+\toprule
+skim\_variable & n\_missing & complete\_rate & mean & sd & p0 & p25 &
+p50 & p75 & p100 & hist\tabularnewline
+\midrule
+\endhead
+known\_hiv\_status & 0 & 1 & 0.89 & 0.31 & 0 & 1 & 1 & 1 & 1 &
+▁▁▁▁▇\tabularnewline
+hivtstever & 0 & 1 & 0.99 & 0.11 & 0 & 1 & 1 & 1 & 1 &
+▁▁▁▁▇\tabularnewline
+hivtstrslt & 0 & 1 & 0.89 & 0.31 & 0 & 1 & 1 & 1 & 1 &
+▁▁▁▁▇\tabularnewline
+hivpsbp & 0 & 1 & 0.17 & 0.38 & 0 & 0 & 0 & 0 & 1 & ▇▁▁▁▂\tabularnewline
+hivrtpg & 0 & 1 & 0.04 & 0.21 & 0 & 0 & 0 & 0 & 1 & ▇▁▁▁▁\tabularnewline
+hivrslr & 0 & 1 & 0.00 & 0.02 & 0 & 0 & 0 & 0 & 1 & ▇▁▁▁▁\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{run-lca-without-random-effects}{%
+\subsubsection{run LCA without random
+effects}\label{run-lca-without-random-effects}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{ind_lca2w =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(ind_dat_w_lca, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_ind2w =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(ind_lca2w)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{add-random-effects}{%
+\subsubsection{add random effects}\label{add-random-effects}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{aware_lca_rw =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(ind_dat_w_lca, }\DataTypeTok{random =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_rw =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(aware_lca_rw, }\DataTypeTok{boot =} \OtherTok{TRUE}\NormalTok{)}
+\CommentTok{# summary(aware_lca_r)}
+\NormalTok{lca_probs_rw}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Class  1 
+##                     Outcome p        2.5 %    97.5 %
+## known_hiv_status 0.9999986113 9.999701e-01 0.9999998
+## hivtstever       0.9994479601 3.566326e-01 0.9999921
+## hivtstrslt       0.9955933667 9.837255e-01 0.9983969
+## hivpsbp          0.1905292154 1.728760e-01 0.2081651
+## hivrtpg          0.0495606341 4.087971e-02 0.0607979
+## hivrslr          0.0005521227 5.794568e-06 0.7101342
+## Class  2 
+##                     Outcome p        2.5 %       97.5 %
+## known_hiv_status 1.152809e-05 1.670383e-08 2.117951e-05
+## hivtstever       8.976639e-01 8.449721e-01 9.303900e-01
+## hivtstrslt       1.157974e-05 4.124351e-06 4.891633e-05
+## hivpsbp          1.152831e-05 4.088271e-06 4.850129e-05
+## hivrtpg          1.158003e-05 3.049110e-06 6.234327e-05
+## hivrslr          1.158003e-05 4.128323e-06 4.894538e-05
+\end{verbatim}
+
+\hypertarget{extract-classes-1}{%
+\subsubsection{extract classes}\label{extract-classes-1}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{lca_out_ind_w =}\StringTok{ }\KeywordTok{postClassProbs}\NormalTok{(aware_lca_rw) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\NormalTok{janitor}\OperatorTok{::}\KeywordTok{clean_names}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{class =} \KeywordTok{if_else}\NormalTok{(class_}\DecValTok{1} \OperatorTok{>}\StringTok{ }\NormalTok{class_}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_out_w =}\StringTok{ }\NormalTok{ind_dat_w_lca }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(lca_out_ind_w, }\DataTypeTok{copy =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{"known_hiv_status"}\NormalTok{, }\StringTok{"hivtstever"}\NormalTok{, }\StringTok{"hivtstrslt"}\NormalTok{, }\StringTok{"hivpsbp"}\NormalTok{, }\StringTok{"hivrtpg"}\NormalTok{, }\StringTok{"hivrslr"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{xtabs}\NormalTok{(}\OperatorTok{~}\NormalTok{hivpsbp }\OperatorTok{+}\StringTok{ }\NormalTok{class, }\DataTypeTok{data =}\NormalTok{ ind_dat_out_w)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##        class
+## hivpsbp    0    1
+##       0  215 1470
+##       1    0  346
+\end{verbatim}
+
+\hypertarget{there-were-1470-false-negatives-in-hivpsbp.-the-sensitivity-of-this-test-is-3461816-0.19-slightly-higher-but-still-practically-uninformative.}{%
+\paragraph{There were 1470 false negatives in hivpsbp. The sensitivity
+of this test is 346/1816, 0.19, slightly higher, but still practically
+uninformative.}\label{there-were-1470-false-negatives-in-hivpsbp.-the-sensitivity-of-this-test-is-3461816-0.19-slightly-higher-but-still-practically-uninformative.}}
+
+\hypertarget{the-same-analysis-without-random-effects}{%
+\subsubsection{The same analysis without random
+effects}\label{the-same-analysis-without-random-effects}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{lca_out_ind_w2 =}\StringTok{ }\KeywordTok{postClassProbs}\NormalTok{(ind_lca2w) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\NormalTok{janitor}\OperatorTok{::}\KeywordTok{clean_names}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{class =} \KeywordTok{if_else}\NormalTok{(class_}\DecValTok{1} \OperatorTok{>}\StringTok{ }\NormalTok{class_}\DecValTok{2}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_out_w2 =}\StringTok{ }\NormalTok{ind_dat_w_lca }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(lca_out_ind_w2, }\DataTypeTok{copy =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{"known_hiv_status"}\NormalTok{, }\StringTok{"hivtstever"}\NormalTok{, }\StringTok{"hivtstrslt"}\NormalTok{, }\StringTok{"hivpsbp"}\NormalTok{, }\StringTok{"hivrtpg"}\NormalTok{, }\StringTok{"hivrslr"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{xtabs}\NormalTok{(}\OperatorTok{~}\NormalTok{hivpsbp }\OperatorTok{+}\StringTok{ }\NormalTok{class, }\DataTypeTok{data =}\NormalTok{ ind_dat_out_w2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##        class
+## hivpsbp    0    1
+##       0  215 1470
+##       1    0  346
+\end{verbatim}
+
+\hypertarget{transform-the-pregnancy-variables}{%
+\subsection{transform the pregnancy
+variables?}\label{transform-the-pregnancy-variables}}
+
+\hypertarget{there-are-three-questions-related-to-pregnancy-included-in-this-model.}{%
+\subsubsection{There are three questions related to pregnancy included
+in this
+model.}\label{there-are-three-questions-related-to-pregnancy-included-in-this-model.}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pgyes =}\StringTok{ }\NormalTok{ind_dat_w_lca }\OperatorTok{%>%}
+\StringTok{  }\KeywordTok{filter}\NormalTok{(hivpsbp }\OperatorTok{==}\StringTok{ }\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{hivrtpg }\OperatorTok{==}\StringTok{ }\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{hivrslr }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{) }\CommentTok{# 437 rows}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{there-are-437-patients-who-had-hiv-results-from-one-of-these-three-variables.}{%
+\paragraph{There are 437 patients who had hiv results from one of these
+three
+variables.}\label{there-are-437-patients-who-had-hiv-results-from-one-of-these-three-variables.}}
+
+\hypertarget{we-combine-the-three-variables-into-one.}{%
+\subsubsection{We combine the three variables into
+one.}\label{we-combine-the-three-variables-into-one.}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_w_lca2 =}\StringTok{ }\NormalTok{ind_dat_w_lca }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{hivpg =} \KeywordTok{if_else}\NormalTok{(hivpsbp }\OperatorTok{==}\StringTok{ }\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{hivrtpg }\OperatorTok{==}\StringTok{ }\DecValTok{1} \OperatorTok{|}\StringTok{ }\NormalTok{hivrslr }\OperatorTok{==}\StringTok{ }\DecValTok{1}\NormalTok{, }\DecValTok{1}\NormalTok{, }\DecValTok{0}\NormalTok{)) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(}\OperatorTok{-}\NormalTok{hivpsbp, }\OperatorTok{-}\NormalTok{hivrtpg, }\OperatorTok{-}\NormalTok{hivrslr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{ind_lca3 =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(ind_dat_w_lca2, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_ind3 =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(ind_lca3)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{aware_lca_r3 =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(ind_dat_w_lca2, }\DataTypeTok{random =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_r3 =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(aware_lca_r3, }\DataTypeTok{boot =} \OtherTok{TRUE}\NormalTok{)}
+\CommentTok{# summary(aware_lca_r)}
+\NormalTok{lca_probs_r3}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Class  1 
+##                     Outcome p        2.5 %       97.5 %
+## known_hiv_status 1.160260e-05 8.865961e-09 4.463415e-05
+## hivtstever       8.976651e-01 8.447718e-01 9.301263e-01
+## hivtstrslt       1.161160e-05 2.665465e-06 5.381860e-05
+## hivpg            1.160269e-05 2.993379e-06 5.412988e-05
+## Class  2 
+##                  Outcome p     2.5 %    97.5 %
+## known_hiv_status 0.9999986 0.9999890 0.9999997
+## hivtstever       0.9994480 0.4996814 0.9999921
+## hivtstrslt       0.9955933 0.8685787 0.9996058
+## hivpg            0.2406393 0.2190586 0.2615708
+\end{verbatim}
+
+\hypertarget{extract-classes-2}{%
+\subsubsection{extract classes}\label{extract-classes-2}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{lca_out_ind3 =}\StringTok{ }\KeywordTok{postClassProbs}\NormalTok{(aware_lca_r3) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\NormalTok{janitor}\OperatorTok{::}\KeywordTok{clean_names}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{class =} \KeywordTok{if_else}\NormalTok{(class_}\DecValTok{1} \OperatorTok{>}\StringTok{ }\NormalTok{class_}\DecValTok{2}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{ind_dat_out3 =}\StringTok{ }\NormalTok{ind_dat_w_lca2 }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(lca_out_ind3, }\DataTypeTok{copy =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{"known_hiv_status"}\NormalTok{, }\StringTok{"hivtstever"}\NormalTok{, }\StringTok{"hivtstrslt"}\NormalTok{, }\StringTok{"hivpg"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{xtabs}\NormalTok{(}\OperatorTok{~}\NormalTok{hivpg }\OperatorTok{+}\StringTok{ }\NormalTok{class, }\DataTypeTok{data =}\NormalTok{ ind_dat_out3)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##      class
+## hivpg    0    1
+##     0  215 1379
+##     1    0  437
+\end{verbatim}
+
+\hypertarget{there-are-1379-false-negatives.-the-sensitivity-is-therefore-4371816-0.24.-still-better-but-not-useful.}{%
+\paragraph{There are 1379 false negatives. The sensitivity is therefore
+437/1816, 0.24. Still better, but not
+useful.}\label{there-are-1379-false-negatives.-the-sensitivity-is-therefore-4371816-0.24.-still-better-but-not-useful.}}
+
+\hypertarget{remove-the-pregnancy-variables-add-back-vlunder200}{%
+\subsection{remove the pregnancy variables, add back
+vlunder200?}\label{remove-the-pregnancy-variables-add-back-vlunder200}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{full_df =}\StringTok{ }\KeywordTok{left_join}\NormalTok{(bio_dat, independent, }\DataTypeTok{by =} \StringTok{"personid"}\NormalTok{)}
+
+\NormalTok{full_df_lca =}\StringTok{ }\NormalTok{full_df }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\KeywordTok{across}\NormalTok{(}\DataTypeTok{.fns =}\NormalTok{ as.numeric),}
+       \KeywordTok{across}\NormalTok{(}\KeywordTok{everything}\NormalTok{(), }\OperatorTok{~}\KeywordTok{recode}\NormalTok{(.x, }\StringTok{"1"}\NormalTok{ =}\StringTok{ }\DecValTok{1}\NormalTok{, }
+                                    \StringTok{"2"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                    \StringTok{"99"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                    \StringTok{"-8"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                    \StringTok{"3"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{, }
+                                    \StringTok{"4"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{,}
+                                    \StringTok{"-9"}\NormalTok{ =}\StringTok{ }\DecValTok{0}\NormalTok{)),}
+       \KeywordTok{across}\NormalTok{(}\KeywordTok{everything}\NormalTok{(), }\OperatorTok{~}\KeywordTok{replace_na}\NormalTok{(.x, }\DecValTok{0}\NormalTok{))) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{select}\NormalTok{(known_hiv_status, hivtstever, hivtstrslt, vlunder200)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{our-full-dataset-has-3055-rows-and-4-variables.-three-of-these-variables-we-keep-from-our-previous-model-and-1-is-added-from-the-biomarker-dataset.-vlunder200-is-suspected-to-be-a-proxy-for-awareness-because-most-of-those-who-are-aware-will-be-on-art-in-eswatini.}{%
+\paragraph{Our full dataset has 3055 rows and 4 variables. Three of
+these variables we keep from our previous model and 1 is added from the
+biomarker dataset. ``vlunder200'' is suspected to be a proxy for
+awareness because most of those who are aware will be on art in
+Eswatini.}\label{our-full-dataset-has-3055-rows-and-4-variables.-three-of-these-variables-we-keep-from-our-previous-model-and-1-is-added-from-the-biomarker-dataset.-vlunder200-is-suspected-to-be-a-proxy-for-awareness-because-most-of-those-who-are-aware-will-be-on-art-in-eswatini.}}
+
+\hypertarget{no-random-effects}{%
+\subsubsection{no random effects}\label{no-random-effects}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{expanded_lca =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(full_df_lca, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_ind2w =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(expanded_lca)}
+\end{Highlighting}
+\end{Shaded}
+
+\hypertarget{include-random-effects}{%
+\subsubsection{include random effects}\label{include-random-effects}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{aware_lca_full =}\StringTok{ }\NormalTok{randomLCA}\OperatorTok{::}\KeywordTok{randomLCA}\NormalTok{(full_df_lca, }\DataTypeTok{random =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{calcSE =} \OtherTok{TRUE}\NormalTok{)}
+\NormalTok{lca_probs_full =}\StringTok{ }\KeywordTok{outcomeProbs}\NormalTok{(aware_lca_full, }\DataTypeTok{boot =} \OtherTok{TRUE}\NormalTok{)}
+\CommentTok{# summary(aware_lca_r)}
+\NormalTok{lca_probs_full}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Class  1 
+##                     Outcome p        2.5 %       97.5 %
+## known_hiv_status 5.528986e-03 1.498788e-04 7.133662e-01
+## hivtstever       7.118378e-01 6.728008e-01 7.458302e-01
+## hivtstrslt       5.415665e-06 4.870004e-06 5.974019e-06
+## vlunder200       2.306198e-01 1.932576e-01 2.730716e-01
+## Class  2 
+##                  Outcome p     2.5 %    97.5 %
+## known_hiv_status 0.9999990 0.9999990 0.9999991
+## hivtstever       0.9999990 0.9999990 0.9999990
+## hivtstrslt       0.9978973 0.9735050 0.9996860
+## vlunder200       0.7937521 0.7774083 0.8086553
+\end{verbatim}
+
+\hypertarget{extract-classes-3}{%
+\subsubsection{extract classes}\label{extract-classes-3}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{lca_out_full =}\StringTok{ }\KeywordTok{postClassProbs}\NormalTok{(aware_lca_full) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\NormalTok{janitor}\OperatorTok{::}\KeywordTok{clean_names}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{class =} \KeywordTok{if_else}\NormalTok{(class_}\DecValTok{1} \OperatorTok{>}\StringTok{ }\NormalTok{class_}\DecValTok{2}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{full_dat_out =}\StringTok{ }\NormalTok{full_df_lca }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(lca_out_full, }\DataTypeTok{copy =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{"known_hiv_status"}\NormalTok{, }\StringTok{"hivtstever"}\NormalTok{, }\StringTok{"hivtstrslt"}\NormalTok{, }\StringTok{"vlunder200"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{xtabs}\NormalTok{(}\OperatorTok{~}\NormalTok{vlunder200 }\OperatorTok{+}\StringTok{ }\NormalTok{class, }\DataTypeTok{data =}\NormalTok{ full_dat_out)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           class
+## vlunder200    0    1
+##          0  356  534
+##          1  106 2059
+\end{verbatim}
+
+\hypertarget{there-are-534-false-negatives-in-vlunder200.-the-sensitivity-is-20592593-0.79-a-significant-improvement.-including-a-4th-variable-allows-one-to-use-the-random-effects-option-of-the-randomlca-package-in-r.}{%
+\paragraph{There are 534 false negatives in ``vlunder200''. The
+sensitivity is 2059/2593, 0.79, a significant improvement. Including a
+4th variable allows one to use the random effects option of the
+randomLCA package in
+R.}\label{there-are-534-false-negatives-in-vlunder200.-the-sensitivity-is-20592593-0.79-a-significant-improvement.-including-a-4th-variable-allows-one-to-use-the-random-effects-option-of-the-randomlca-package-in-r.}}
+
+\hypertarget{extract-classes-without-random-effects}{%
+\subsubsection{extract classes without random
+effects}\label{extract-classes-without-random-effects}}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{719}\NormalTok{)}
+\NormalTok{lca_out_exp =}\StringTok{ }\KeywordTok{postClassProbs}\NormalTok{(expanded_lca) }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\NormalTok{janitor}\OperatorTok{::}\KeywordTok{clean_names}\NormalTok{() }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{mutate}\NormalTok{(}\DataTypeTok{class =} \KeywordTok{if_else}\NormalTok{(class_}\DecValTok{1} \OperatorTok{>}\StringTok{ }\NormalTok{class_}\DecValTok{2}\NormalTok{, }\DecValTok{0}\NormalTok{, }\DecValTok{1}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{exp_dat_out =}\StringTok{ }\NormalTok{full_df_lca }\OperatorTok{%>%}\StringTok{ }
+\StringTok{  }\KeywordTok{left_join}\NormalTok{(lca_out_exp, }\DataTypeTok{copy =} \OtherTok{TRUE}\NormalTok{, }\DataTypeTok{by =} \KeywordTok{c}\NormalTok{(}\StringTok{"known_hiv_status"}\NormalTok{, }\StringTok{"hivtstever"}\NormalTok{, }\StringTok{"hivtstrslt"}\NormalTok{, }\StringTok{"vlunder200"}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{xtabs}\NormalTok{(}\OperatorTok{~}\NormalTok{vlunder200 }\OperatorTok{+}\StringTok{ }\NormalTok{class, }\DataTypeTok{data =}\NormalTok{ exp_dat_out)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           class
+## vlunder200    0    1
+##          0  356  534
+##          1  106 2059
+\end{verbatim}
+
+\end{document}

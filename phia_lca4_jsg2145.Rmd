@@ -2,7 +2,7 @@
 title: "phia_lca4_jsg2145"
 author: "Jared Garfinkel"
 date: "8/21/2020"
-output: github_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}
