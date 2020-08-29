@@ -415,23 +415,407 @@ OutcomeProbs.Table.AwareART</code></pre>
 ## 1      1.0000           1        0.986     0.8480
 ## 2      0.1257           0        0.695     0.0691
 ## 3      0.0000           0        0.000     0.1226</code></pre>
-<pre class="r"><code>t(outcomep) %&gt;% 
+<pre class="r"><code>transpose_class = t(outcomep) %&gt;% 
   data.frame() %&gt;% 
   tibble(Predictor = row.names(.)) %&gt;% 
   select(Predictor, everything()) %&gt;% 
   rename(&quot;Class 1 Aware - On Art&quot; = &quot;X1&quot;,
          &quot;Class 2 Aware - Not on ART&quot; = &quot;X2&quot;,
-         &quot;Class 3 Unaware&quot; = &quot;X3&quot;)</code></pre>
-<pre><code>## # A tibble: 7 x 4
-##   Predictor      `Class 1 Aware - On ~ `Class 2 Aware - Not on~ `Class 3 Unawar~
-##   &lt;chr&gt;                          &lt;dbl&gt;                    &lt;dbl&gt;            &lt;dbl&gt;
-## 1 never_tested                  0                        0                 0.323
-## 2 reported_nega~                0.0434                   0.066             0.607
-## 3 reported_posi~                1.00                     1                 0    
-## 4 arvstakenev                   1                        0.126             0    
-## 5 arvscurrent                   1                        0                 0    
-## 6 oth_art_care                  0.986                    0.695             0    
-## 7 vlunder200                    0.848                    0.0691            0.123</code></pre>
+         &quot;Class 3 Unaware&quot; = &quot;X3&quot;)
+gt(transpose_class)</code></pre>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#inrckxqcca .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#inrckxqcca .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#inrckxqcca .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#inrckxqcca .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#inrckxqcca .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#inrckxqcca .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#inrckxqcca .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#inrckxqcca .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#inrckxqcca .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#inrckxqcca .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#inrckxqcca .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#inrckxqcca .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#inrckxqcca .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#inrckxqcca .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#inrckxqcca .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#inrckxqcca .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#inrckxqcca .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#inrckxqcca .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#inrckxqcca .gt_left {
+  text-align: left;
+}
+
+#inrckxqcca .gt_center {
+  text-align: center;
+}
+
+#inrckxqcca .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#inrckxqcca .gt_font_normal {
+  font-weight: normal;
+}
+
+#inrckxqcca .gt_font_bold {
+  font-weight: bold;
+}
+
+#inrckxqcca .gt_font_italic {
+  font-style: italic;
+}
+
+#inrckxqcca .gt_super {
+  font-size: 65%;
+}
+
+#inrckxqcca .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="inrckxqcca" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+  
+  <thead class="gt_col_headings">
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Predictor</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Class 1 Aware - On Art</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Class 2 Aware - Not on ART</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Class 3 Unaware</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr>
+      <td class="gt_row gt_left">never_tested</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0.3226</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">reported_negative</td>
+      <td class="gt_row gt_right">0.0434</td>
+      <td class="gt_row gt_right">0.0660</td>
+      <td class="gt_row gt_right">0.6071</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">reported_positive</td>
+      <td class="gt_row gt_right">0.9996</td>
+      <td class="gt_row gt_right">1.0000</td>
+      <td class="gt_row gt_right">0.0000</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">arvstakenev</td>
+      <td class="gt_row gt_right">1.0000</td>
+      <td class="gt_row gt_right">0.1257</td>
+      <td class="gt_row gt_right">0.0000</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">arvscurrent</td>
+      <td class="gt_row gt_right">1.0000</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0.0000</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">oth_art_care</td>
+      <td class="gt_row gt_right">0.9860</td>
+      <td class="gt_row gt_right">0.6950</td>
+      <td class="gt_row gt_right">0.0000</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">vlunder200</td>
+      <td class="gt_row gt_right">0.8480</td>
+      <td class="gt_row gt_right">0.0691</td>
+      <td class="gt_row gt_right">0.1226</td>
+    </tr>
+  </tbody>
+  
+  
+</table></div>
 </div>
 <div id="extract-classes" class="section level2">
 <h2>extract classes</h2>
@@ -442,12 +826,15 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %&gt;%
                          if_else(class_2 &gt; class_3, 1,
                                  if_else(class_3 &gt; class_1, 3, 1)), 
                          if_else(class_2 &gt; class_3, 2, 3)),
-         vlsaware = if_else(class == 1, 1, 0), # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unaware
-         awarenotart = if_else(class == 2, 1, 0), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;</code></pre>
+         vlsaware = if_else(class == 1, 1, 0), # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;
+         awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unawarecoded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;</code></pre>
 <pre class="r"><code>full_dat_out = bio_select_mod %&gt;% 
   left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
   left_join(lca_out_full, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;vlunder200&quot;))</code></pre>
+</div>
+<div id="awareartselfreported" class="section level2">
+<h2>awareartselfreported</h2>
 <p>The agreement between variables is uncanny</p>
 <pre class="r"><code>xtabs(~awareartselfreported.y + class, data = full_dat_out, exclude = &quot;99&quot;)</code></pre>
 <pre><code>##                       class
@@ -455,6 +842,9 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %&gt;%
 ##                      1    0    0  838
 ##                      2    0  316    0
 ##                      3 2348    1    0</code></pre>
+</div>
+<div id="awareness" class="section level2">
+<h2>awareness</h2>
 <pre class="r"><code>xtabs(~aware + unaware, data = full_dat_out, exclude = &quot;99&quot;)</code></pre>
 <pre><code>##      unaware
 ## aware    0    1
@@ -845,6 +1235,9 @@ gt_tbl</code></pre>
   
   
 </table></div>
+</div>
+<div id="on-art" class="section level2">
+<h2>on ART</h2>
 <pre class="r"><code>xtabs(~ art + vlsaware, data = full_dat_out, exclude = &quot;99&quot;) %&gt;% 
   ftable(.)</code></pre>
 <pre><code>##     vlsaware    0    1
@@ -1236,16 +1629,19 @@ gt_tbl</code></pre>
   
   
 </table></div>
-<p>If a person is unaware, then they would not be on art. These should not be included in the “aware - not on art” variable. So, we take those out using this table.</p>
-<pre class="r"><code>xtabs(~ art + awarenotart + unaware, data = full_dat_out, exclude = &quot;99&quot;) %&gt;% 
+</div>
+<div id="aware---not-on-art" class="section level2">
+<h2>Aware - not on ART</h2>
+<p>If a person is unaware, then they would not be on art. These should not be included in the “aware - not on art” variable. So, we take those out using this table. A “0” in unaware means they were unaware. A “1” in unaware means they were not unaware. Only those who were not unaware should be counted.</p>
+<pre class="r"><code>xtabs(~ art + unaware + awarenotart, data = full_dat_out, exclude = &quot;99&quot;) %&gt;% 
   ftable(col.vars = c(2:3))</code></pre>
-<pre><code>##     awarenotart    0         1     
-##     unaware        0    1    0    1
+<pre><code>##     unaware        0         1     
+##     awarenotart    0    1    0    1
 ## art                                
 ## 0                714    0    0  294
-## 1                125 2349    0   24</code></pre>
+## 1                125    0 2349   24</code></pre>
 <pre class="r"><code>notonartbl = tibble(name = c(&quot;Sensitivity&quot;, &quot;Specificity&quot;, &quot;PPV&quot;, &quot;NPV&quot;),
-                  value = c(round(2349/2349, 2), round(714/839, 2), round(2349/2474, 2), round(714/714, 2)))
+                  value = c(round(2349/2349, 2), round(294/318, 2), round(2349/2373, 2), round(294/294, 2)))
 gtbl = gt(notonartbl)
 
 
@@ -1608,7 +2004,7 @@ gt_tbl</code></pre>
     </tr>
     <tr>
       <td class="gt_row gt_left">PPV</td>
-      <td class="gt_row gt_right">0.95</td>
+      <td class="gt_row gt_right">0.99</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">NPV</td>
@@ -1623,12 +2019,90 @@ gt_tbl</code></pre>
     </tr>
     <tr>
       <td class="gt_row gt_left">Specificity</td>
-      <td class="gt_row gt_right">0.85</td>
+      <td class="gt_row gt_right">0.92</td>
     </tr>
   </tbody>
   
   
 </table></div>
+</div>
+<div id="calculating-prevalence-using-confusionmatrix" class="section level1">
+<h1>Calculating Prevalence using confusionMatrix()</h1>
+<div id="calculate-confidence-intervals-for-sensitivity-and-specifity-to-calculate-prevalence" class="section level2">
+<h2>calculate confidence intervals for sensitivity and specifity to calculate prevalence</h2>
+<div id="awareness-1" class="section level3">
+<h3>Awareness</h3>
+<pre class="r"><code>conmat_aware_df = full_dat_out
+
+conmat_aware_df$class = factor(conmat_aware_df$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;aware&quot;, &quot;aware&quot;, &quot;unaware&quot;))
+conmat_aware_df$aware = factor(conmat_aware_df$aware, c(&quot;aware&quot; = 1, &quot;unaware&quot; = 0), labels = c(&quot;aware&quot;, &quot;unaware&quot;))
+cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$aware, positive = &quot;aware&quot;)
+cMat</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction aware unaware
+##    aware    2667       0
+##    unaware   125     714
+##                                           
+##                Accuracy : 0.9643          
+##                  95% CI : (0.9577, 0.9702)
+##     No Information Rate : 0.7963          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.8968          
+##                                           
+##  Mcnemar&#39;s Test P-Value : &lt; 2.2e-16       
+##                                           
+##             Sensitivity : 0.9552          
+##             Specificity : 1.0000          
+##          Pos Pred Value : 1.0000          
+##          Neg Pred Value : 0.8510          
+##              Prevalence : 0.7963          
+##          Detection Rate : 0.7607          
+##    Detection Prevalence : 0.7607          
+##       Balanced Accuracy : 0.9776          
+##                                           
+##        &#39;Positive&#39; Class : aware           
+## </code></pre>
+</div>
+<div id="on-art-1" class="section level3">
+<h3>On ART</h3>
+<pre class="r"><code>conmat_art_df = full_dat_out
+
+conmat_art_df$class = factor(conmat_art_df$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;on art&quot;, &quot;not on art&quot;, &quot;not on art&quot;))
+conmat_art_df$art = factor(conmat_art_df$art, c(&quot;on art&quot; = 1, &quot;not on art&quot; = 0), labels = c(&quot;on art&quot;, &quot;not on art&quot;))
+cMat.art = caret::confusionMatrix(conmat_art_df$class, conmat_art_df$art, positive = &quot;on art&quot;)
+cMat.art</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##             Reference
+## Prediction   on art not on art
+##   on art       2349          0
+##   not on art    149       1008
+##                                           
+##                Accuracy : 0.9575          
+##                  95% CI : (0.9503, 0.9639)
+##     No Information Rate : 0.7125          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9006          
+##                                           
+##  Mcnemar&#39;s Test P-Value : &lt; 2.2e-16       
+##                                           
+##             Sensitivity : 0.9404          
+##             Specificity : 1.0000          
+##          Pos Pred Value : 1.0000          
+##          Neg Pred Value : 0.8712          
+##              Prevalence : 0.7125          
+##          Detection Rate : 0.6700          
+##    Detection Prevalence : 0.6700          
+##       Balanced Accuracy : 0.9702          
+##                                           
+##        &#39;Positive&#39; Class : on art          
+## </code></pre>
+</div>
+</div>
 </div>
 
 

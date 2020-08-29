@@ -10,6 +10,7 @@ library(tidyverse)
 library(viridis)
 library(randomLCA)
 library(gt)
+library(caret)
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -121,13 +122,14 @@ OutcomeProbs.Table.AwareART
 ```
 
 ```{r}
-t(outcomep) %>% 
+transpose_class = t(outcomep) %>% 
   data.frame() %>% 
   tibble(Predictor = row.names(.)) %>% 
   select(Predictor, everything()) %>% 
   rename("Class 1 Aware - On Art" = "X1",
          "Class 2 Aware - Not on ART" = "X2",
          "Class 3 Unaware" = "X3")
+gt(transpose_class)
 ```
 
 
@@ -141,9 +143,9 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %>%
                          if_else(class_2 > class_3, 1,
                                  if_else(class_3 > class_1, 3, 1)), 
                          if_else(class_2 > class_3, 2, 3)),
-         vlsaware = if_else(class == 1, 1, 0), # coded "backwards" meaning 0 is unaware, 1 is not unaware
-         awarenotart = if_else(class == 2, 1, 0), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER "aware AND on art" OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER "aware AND on art" OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unawarecoded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
 ```
 
 ```{r}
@@ -153,12 +155,15 @@ full_dat_out = bio_select_mod %>%
 
 ```
 
+## awareartselfreported
+
 The agreement between variables is uncanny
 
 ```{r}
 xtabs(~awareartselfreported.y + class, data = full_dat_out, exclude = "99")
 ```
 
+## awareness
 
 ```{r}
 xtabs(~aware + unaware, data = full_dat_out, exclude = "99")
@@ -182,6 +187,7 @@ gt_tbl <-
 gt_tbl
 ```
 
+## on ART
 
 ```{r}
 xtabs(~ art + vlsaware, data = full_dat_out, exclude = "99") %>% 
@@ -205,16 +211,18 @@ gt_tbl <-
 gt_tbl
 ```
 
-If a person is unaware, then they would not be on art. These should not be included in the "aware - not on art" variable. So, we take those out using this table.
+## Aware - not on ART
+
+If a person is unaware, then they would not be on art. These should not be included in the "aware - not on art" variable. So, we take those out using this table. A "0" in unaware means they were unaware. A "1" in unaware means they were not unaware. Only those who were not unaware should be counted.
 
 ```{r}
-xtabs(~ art + awarenotart + unaware, data = full_dat_out, exclude = "99") %>% 
+xtabs(~ art + unaware + awarenotart, data = full_dat_out, exclude = "99") %>% 
   ftable(col.vars = c(2:3))
 ```
 
 ```{r}
 notonartbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
-                  value = c(round(2349/2349, 2), round(714/839, 2), round(2349/2474, 2), round(714/714, 2)))
+                  value = c(round(2349/2349, 2), round(294/318, 2), round(2349/2373, 2), round(294/294, 2)))
 gtbl = gt(notonartbl)
 
 
@@ -228,4 +236,144 @@ gt_tbl <-
 
 gt_tbl
 ```
+
+# Calculating Prevalence using confusionMatrix()
+
+```{r Diggle, include = FALSE, eval = FALSE}
+prevalence.bayes <- function(theta, 
+                             T, 
+                             n, 
+                             lowse=0.5, 
+                             highse=1.0, 
+                             sea=1, 
+                             seb=1, 
+                             lowsp=0.5, 
+                             highsp=1.0, 
+                             spa=1, 
+                             spb=1, 
+                             ngrid=20, 
+                             coverage=0.95) {
+  ibeta <- function(x,a,b) {
+    pbeta(x, a, b) * beta(a, b)
+  }
+  ntheta <- length(theta)
+  bin.width <- (theta[ntheta] - theta[1])/(ntheta - 1)
+  theta <- theta[1] + bin.width*(0:(ntheta - 1))
+  integrand <- array(0, c(ntheta, ngrid, ngrid))
+  h1 <- (highse - lowse)/ngrid
+  h2 <- (highsp - lowsp)/ngrid
+  for (i in 1:ngrid) {
+    se <- lowse + h1*(i - 0.5)
+    pse <- (1/(highse - lowse))*dbeta((se - lowse)/(highse - lowse), sea, seb)
+    for (j in 1:ngrid) {
+      sp <- lowsp + h2*(j - 0.5)
+      psp <- (1/(highsp - lowsp))*dbeta((sp - lowsp)/(highsp - lowsp), spa, spb)
+      c1 <- 1 - sp
+      c2 <- se + sp - 1
+      f <- (1/c2)*choose(n, T)*(ibeta(c1 + c2, T + 1, n - T + 1) - ibeta(c1, T + 1, n - T + 1))
+      p <- c1 + c2*theta
+      density <- rep(0, ntheta)
+      for (k in 1:ntheta) {
+        density[k] <- dbinom(T, n, p[k])/f
+      }
+      integrand[,i,j] <- density*pse*psp
+    }
+  }
+  post <- rep(0, ntheta)
+  for (i in 1:ntheta) {
+    post[i] <- h1*h2*sum(integrand[i,,])
+  }
+  ord <- order(post, decreasing = T)
+  mode <- theta[ord[1]]
+  take <- NULL
+  prob <- 0
+  i <- 0
+  while ((prob < coverage/bin.width) & (i < ntheta)) {
+    i <- i + 1
+    take <- c(take, ord[i])
+    prob <- prob + post[ord[i]]
+  }
+  if (i == ntheta) {
+    print("WARNING: range of values of theta too narrow")
+  }
+  interval <- theta[range(take)]
+  list(theta = theta, post = post, mode = mode, interval = interval, coverage = prob*bin.width)
+}
+```
+
+```{r, include = FALSE, eval = FALSE}
+stable = function(probs = probs2){
+    
+  class <- if_else(probs[[1]]$Outcome[1] > probs[[1]]$Outcome[2], 
+                         if_else(probs[[1]]$Outcome[2] > probs[[1]]$Outcome[3], 1,
+                                 if_else(probs[[1]]$Outcome[3] > probs[[1]]$Outcome[1], 3, 1)), 
+                         if_else(probs[[1]]$Outcome[2] > probs[[1]]$Outcome[3], 2, 3))
+  
+  aware <- if_else(class %in% c(1, 2), 1, 0)
+  
+  art <- if_else(class == 1, 1, 0)
+  
+  unaware <- if_else(class == 3, 1, 0)
+  
+  sens <- apply(probs[[class]], 1, function(x)
+    sprintf("%3.2f (%3.2f, %3.2f)", 
+            x[1], 
+            x[2], 
+            x[3])
+  )
+  
+  spec <- apply(probs[[aware]], 1, function(x)
+    sprintf("%3.2f (%3.2f, %3.2f)", 
+            1 - x[1], 
+            1 - x[3], 
+            1 - x[2])
+  )
+  
+  stable <- data.frame(sens, spec)
+  
+  names(stable) <- c("Sensitivity", "Specificity")
+  
+  return(list(aware, art, unaware))
+}
+```
+
+## calculate confidence intervals for sensitivity and specifity to calculate prevalence
+
+### Awareness
+
+```{r}
+conmat_aware_df = full_dat_out
+
+conmat_aware_df$class = factor(conmat_aware_df$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
+conmat_aware_df$aware = factor(conmat_aware_df$aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$aware, positive = "aware")
+cMat
+
+```
+
+```{r from Diggle, include = FALSE, eval = FALSE}
+c = max(0, (a - (1 - sp))/(se + sp - 1))
+d = min(1, (b - (1 - sp))/(se + sp - 1))
+theta = paste(c, ", ", d)
+theta
+```
+
+```{r, include = FALSE, eval = FALSE}
+a = cMat$overall["AccuracyLower"]
+b = cMat$overall["AccuracyUpper"]
+se = cMat$byClass["Sensitivity"]
+sp = cMat$byClass["Specificity"]
+```
+
+### On ART
+
+```{r}
+conmat_art_df = full_dat_out
+
+conmat_art_df$class = factor(conmat_art_df$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("on art", "not on art", "not on art"))
+conmat_art_df$art = factor(conmat_art_df$art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat.art = caret::confusionMatrix(conmat_art_df$class, conmat_art_df$art, positive = "on art")
+cMat.art
+```
+
 
