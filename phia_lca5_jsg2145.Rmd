@@ -144,8 +144,8 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %>%
                                  if_else(class_3 > class_1, 3, 1)), 
                          if_else(class_2 > class_3, 2, 3)),
          vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
-         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER "aware AND on art" OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unawarecoded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, "1" is NEITHER unaware NOR aware and not on art - in terms of  class, a "1" means that an individual may be EITHER "aware AND on art" OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unaware
 ```
 
 ```{r}
@@ -163,7 +163,9 @@ The agreement between variables is uncanny
 xtabs(~awareartselfreported.y + class, data = full_dat_out, exclude = "99")
 ```
 
-## awareness
+## Awareness
+
+The prevalence can be calculated as `r round(2667/3506, 2)`.
 
 ```{r}
 xtabs(~aware + unaware, data = full_dat_out, exclude = "99")
@@ -189,6 +191,7 @@ gt_tbl
 
 ## on ART
 
+The prevalence can be calculated as `r round(2349/3506, 2)`, but this includes those who are unaware.
 ```{r}
 xtabs(~ art + vlsaware, data = full_dat_out, exclude = "99") %>% 
   ftable(.)
@@ -213,7 +216,7 @@ gt_tbl
 
 ## Aware - not on ART
 
-If a person is unaware, then they would not be on art. These should not be included in the "aware - not on art" variable. So, we take those out using this table. A "0" in unaware means they were unaware. A "1" in unaware means they were not unaware. Only those who were not unaware should be counted.
+If a person is unaware, then they would not be on art. These should not be included in the "aware - not on art" variable. So, we take those out using this table. A "0" in unaware means they were unaware. A "1" in unaware means they were not unaware. Only those who were not unaware should be counted. The prevalence may be calculated as `r round(2349/2667, 2)` of those who are aware (or not unaware) and on art according to this test.
 
 ```{r}
 xtabs(~ art + unaware + awarenotart, data = full_dat_out, exclude = "99") %>% 
@@ -337,19 +340,19 @@ stable = function(probs = probs2){
 }
 ```
 
-## calculate confidence intervals for sensitivity and specifity to calculate prevalence
-
-### Awareness
+## Awareness
 
 ```{r}
 conmat_aware_df = full_dat_out
 
 conmat_aware_df$class = factor(conmat_aware_df$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
 conmat_aware_df$aware = factor(conmat_aware_df$aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
-cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$aware, positive = "aware")
+cMat = caret::confusionMatrix(conmat_aware_df$aware, conmat_aware_df$class, positive = "aware")
 cMat
 
 ```
+
+Note the prevalence is calculated as `r round(cMat$byClass[["Prevalence"]]*100, 2)`%.
 
 ```{r from Diggle, include = FALSE, eval = FALSE}
 c = max(0, (a - (1 - sp))/(se + sp - 1))
@@ -365,15 +368,15 @@ se = cMat$byClass["Sensitivity"]
 sp = cMat$byClass["Specificity"]
 ```
 
-### On ART
+## On ART
 
 ```{r}
 conmat_art_df = full_dat_out
 
 conmat_art_df$class = factor(conmat_art_df$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("on art", "not on art", "not on art"))
 conmat_art_df$art = factor(conmat_art_df$art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
-cMat.art = caret::confusionMatrix(conmat_art_df$class, conmat_art_df$art, positive = "on art")
+cMat.art = caret::confusionMatrix(conmat_art_df$art, conmat_art_df$class, positive = "on art")
 cMat.art
 ```
 
-
+Note the prevalence is calculated as `r round(cMat.art$byClass[["Prevalence"]]*100, 2)`%. However, this includes those who are not aware of their status.

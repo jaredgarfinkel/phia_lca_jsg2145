@@ -827,8 +827,8 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %&gt;%
                                  if_else(class_3 &gt; class_1, 3, 1)), 
                          if_else(class_2 &gt; class_3, 2, 3)),
          vlsaware = if_else(class == 1, 1, 0), # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;
-         awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unawarecoded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;</code></pre>
+         awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, &quot;1&quot; is NEITHER unaware NOR aware and not on art - in terms of  class, a &quot;1&quot; means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unaware</code></pre>
 <pre class="r"><code>full_dat_out = bio_select_mod %&gt;% 
   left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
   left_join(lca_out_full, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;vlunder200&quot;))</code></pre>
@@ -844,7 +844,8 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %&gt;%
 ##                      3 2348    1    0</code></pre>
 </div>
 <div id="awareness" class="section level2">
-<h2>awareness</h2>
+<h2>Awareness</h2>
+<p>The prevalence can be calculated as 0.76.</p>
 <pre class="r"><code>xtabs(~aware + unaware, data = full_dat_out, exclude = &quot;99&quot;)</code></pre>
 <pre><code>##      unaware
 ## aware    0    1
@@ -1238,6 +1239,7 @@ gt_tbl</code></pre>
 </div>
 <div id="on-art" class="section level2">
 <h2>on ART</h2>
+<p>The prevalence can be calculated as 0.67, but this includes those who are unaware.</p>
 <pre class="r"><code>xtabs(~ art + vlsaware, data = full_dat_out, exclude = &quot;99&quot;) %&gt;% 
   ftable(.)</code></pre>
 <pre><code>##     vlsaware    0    1
@@ -1632,7 +1634,7 @@ gt_tbl</code></pre>
 </div>
 <div id="aware---not-on-art" class="section level2">
 <h2>Aware - not on ART</h2>
-<p>If a person is unaware, then they would not be on art. These should not be included in the “aware - not on art” variable. So, we take those out using this table. A “0” in unaware means they were unaware. A “1” in unaware means they were not unaware. Only those who were not unaware should be counted.</p>
+<p>If a person is unaware, then they would not be on art. These should not be included in the “aware - not on art” variable. So, we take those out using this table. A “0” in unaware means they were unaware. A “1” in unaware means they were not unaware. Only those who were not unaware should be counted. The prevalence may be calculated as 0.88 of those who are aware (or not unaware) and on art according to this test.</p>
 <pre class="r"><code>xtabs(~ art + unaware + awarenotart, data = full_dat_out, exclude = &quot;99&quot;) %&gt;% 
   ftable(col.vars = c(2:3))</code></pre>
 <pre><code>##     unaware        0         1     
@@ -2028,80 +2030,79 @@ gt_tbl</code></pre>
 </div>
 <div id="calculating-prevalence-using-confusionmatrix" class="section level1">
 <h1>Calculating Prevalence using confusionMatrix()</h1>
-<div id="calculate-confidence-intervals-for-sensitivity-and-specifity-to-calculate-prevalence" class="section level2">
-<h2>calculate confidence intervals for sensitivity and specifity to calculate prevalence</h2>
-<div id="awareness-1" class="section level3">
-<h3>Awareness</h3>
+<div id="awareness-1" class="section level2">
+<h2>Awareness</h2>
 <pre class="r"><code>conmat_aware_df = full_dat_out
 
 conmat_aware_df$class = factor(conmat_aware_df$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;aware&quot;, &quot;aware&quot;, &quot;unaware&quot;))
 conmat_aware_df$aware = factor(conmat_aware_df$aware, c(&quot;aware&quot; = 1, &quot;unaware&quot; = 0), labels = c(&quot;aware&quot;, &quot;unaware&quot;))
-cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$aware, positive = &quot;aware&quot;)
+cMat = caret::confusionMatrix(conmat_aware_df$aware, conmat_aware_df$class, positive = &quot;aware&quot;)
 cMat</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
 ## Prediction aware unaware
-##    aware    2667       0
-##    unaware   125     714
+##    aware    2667     125
+##    unaware     0     714
 ##                                           
 ##                Accuracy : 0.9643          
 ##                  95% CI : (0.9577, 0.9702)
-##     No Information Rate : 0.7963          
+##     No Information Rate : 0.7607          
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
 ##                                           
 ##                   Kappa : 0.8968          
 ##                                           
 ##  Mcnemar&#39;s Test P-Value : &lt; 2.2e-16       
 ##                                           
-##             Sensitivity : 0.9552          
-##             Specificity : 1.0000          
-##          Pos Pred Value : 1.0000          
-##          Neg Pred Value : 0.8510          
-##              Prevalence : 0.7963          
+##             Sensitivity : 1.0000          
+##             Specificity : 0.8510          
+##          Pos Pred Value : 0.9552          
+##          Neg Pred Value : 1.0000          
+##              Prevalence : 0.7607          
 ##          Detection Rate : 0.7607          
-##    Detection Prevalence : 0.7607          
-##       Balanced Accuracy : 0.9776          
+##    Detection Prevalence : 0.7963          
+##       Balanced Accuracy : 0.9255          
 ##                                           
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
+<p>Note the prevalence is calculated as 76.07%.</p>
 </div>
-<div id="on-art-1" class="section level3">
-<h3>On ART</h3>
+<div id="on-art-1" class="section level2">
+<h2>On ART</h2>
 <pre class="r"><code>conmat_art_df = full_dat_out
 
 conmat_art_df$class = factor(conmat_art_df$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;on art&quot;, &quot;not on art&quot;, &quot;not on art&quot;))
 conmat_art_df$art = factor(conmat_art_df$art, c(&quot;on art&quot; = 1, &quot;not on art&quot; = 0), labels = c(&quot;on art&quot;, &quot;not on art&quot;))
-cMat.art = caret::confusionMatrix(conmat_art_df$class, conmat_art_df$art, positive = &quot;on art&quot;)
+cMat.art = caret::confusionMatrix(conmat_art_df$art, conmat_art_df$class, positive = &quot;on art&quot;)
 cMat.art</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##             Reference
 ## Prediction   on art not on art
-##   on art       2349          0
-##   not on art    149       1008
+##   on art       2349        149
+##   not on art      0       1008
 ##                                           
 ##                Accuracy : 0.9575          
 ##                  95% CI : (0.9503, 0.9639)
-##     No Information Rate : 0.7125          
+##     No Information Rate : 0.67            
 ##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
 ##                                           
 ##                   Kappa : 0.9006          
 ##                                           
 ##  Mcnemar&#39;s Test P-Value : &lt; 2.2e-16       
 ##                                           
-##             Sensitivity : 0.9404          
-##             Specificity : 1.0000          
-##          Pos Pred Value : 1.0000          
-##          Neg Pred Value : 0.8712          
-##              Prevalence : 0.7125          
+##             Sensitivity : 1.0000          
+##             Specificity : 0.8712          
+##          Pos Pred Value : 0.9404          
+##          Neg Pred Value : 1.0000          
+##              Prevalence : 0.6700          
 ##          Detection Rate : 0.6700          
-##    Detection Prevalence : 0.6700          
-##       Balanced Accuracy : 0.9702          
+##    Detection Prevalence : 0.7125          
+##       Balanced Accuracy : 0.9356          
 ##                                           
 ##        &#39;Positive&#39; Class : on art          
 ## </code></pre>
-</div>
+<p>Note the prevalence is calculated as 67%. However, this includes those who are not aware of their status.</p>
 </div>
 </div>
 
