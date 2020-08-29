@@ -30,7 +30,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 ## read in data
 
-```{r, echo = FALSE, results = 'hide', cache = TRUE, warning = FALSE}
+```{r, echo = FALSE, results = 'hide', cache = FALSE, warning = FALSE}
 # Load in PHIA data
 
 recode_one_zero <- function(x) {
@@ -41,10 +41,10 @@ recode_one_zero <- function(x) {
 }
 
 ## read in data
-bio <- read_csv("./data/zimphia2015adultbio.csv") %>% 
+bio <- read_csv("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\zimphia2015adultbio.csv") %>% 
   janitor::clean_names() %>% 
   mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt, -resultvlc), ~as.numeric(.x)))
-ind <- read_csv("./data/zimphia2015adultind.csv") %>% 
+ind <- read_csv("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\zimphia2015adultind.csv") %>% 
   janitor::clean_names() %>% 
   mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt), ~as.numeric(.x)))
 
@@ -170,7 +170,7 @@ xtabs(~aware + unaware, data = full_dat_out)
 sensitbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
                   value = c(round(2667/2667, 2), round(714/839, 2), round(2667/2792, 2), round(714/714)))
 gtbl = gt(sensitbl)
-gtbl
+
 
 gt_tbl <- 
   gtbl %>% 
@@ -179,6 +179,8 @@ gt_tbl <-
                 rows = c(1:2)) %>%
   tab_row_group(group = "patient",
                 rows = c(3:4))
+
+gt_tbl
 ```
 
 
