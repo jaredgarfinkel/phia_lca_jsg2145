@@ -406,15 +406,392 @@ colnames(outcomep) &lt;- names(aware_patterns)
 
 OutcomeProbs.Table.AwareART &lt;- as.data.frame( cbind( Class = c(&quot;Class 1 - Unaware&quot;, &quot;Class 2 - Aware, not on ART&quot;, &quot;Class 3 - Aware, on ART&quot;), outcomep)) %&gt;%
   mutate(across(-Class, as.numeric))
-OutcomeProbs.Table.AwareART</code></pre>
-<pre><code>##                         Class never_tested reported_negative reported_positive
-## 1           Class 1 - Unaware       0.0000            0.0434            0.9996
-## 2 Class 2 - Aware, not on ART       0.0000            0.0660            1.0000
-## 3     Class 3 - Aware, on ART       0.3226            0.6071            0.0000
-##   arvstakenev arvscurrent oth_art_care vlunder200
-## 1      1.0000           1        0.986     0.8480
-## 2      0.1257           0        0.695     0.0691
-## 3      0.0000           0        0.000     0.1226</code></pre>
+gt(OutcomeProbs.Table.AwareART)</code></pre>
+<style>html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+#inrckxqcca .gt_table {
+  display: table;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#inrckxqcca .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 0;
+  padding-bottom: 4px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#inrckxqcca .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#inrckxqcca .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#inrckxqcca .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#inrckxqcca .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#inrckxqcca .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#inrckxqcca .gt_group_heading {
+  padding: 8px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#inrckxqcca .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#inrckxqcca .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#inrckxqcca .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#inrckxqcca .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#inrckxqcca .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 12px;
+}
+
+#inrckxqcca .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#inrckxqcca .gt_first_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#inrckxqcca .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#inrckxqcca .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding: 4px;
+}
+
+#inrckxqcca .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#inrckxqcca .gt_sourcenote {
+  font-size: 90%;
+  padding: 4px;
+}
+
+#inrckxqcca .gt_left {
+  text-align: left;
+}
+
+#inrckxqcca .gt_center {
+  text-align: center;
+}
+
+#inrckxqcca .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#inrckxqcca .gt_font_normal {
+  font-weight: normal;
+}
+
+#inrckxqcca .gt_font_bold {
+  font-weight: bold;
+}
+
+#inrckxqcca .gt_font_italic {
+  font-style: italic;
+}
+
+#inrckxqcca .gt_super {
+  font-size: 65%;
+}
+
+#inrckxqcca .gt_footnote_marks {
+  font-style: italic;
+  font-size: 65%;
+}
+</style>
+<div id="inrckxqcca" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;"><table class="gt_table">
+  
+  <thead class="gt_col_headings">
+    <tr>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Class</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">never_tested</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_negative</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_positive</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">arvstakenev</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">arvscurrent</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">oth_art_care</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">vlunder200</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr>
+      <td class="gt_row gt_left">Class 1 - Unaware</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0.0434</td>
+      <td class="gt_row gt_right">0.9996</td>
+      <td class="gt_row gt_right">1.0000</td>
+      <td class="gt_row gt_right">1</td>
+      <td class="gt_row gt_right">0.986</td>
+      <td class="gt_row gt_right">0.8480</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">Class 2 - Aware, not on ART</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0.0660</td>
+      <td class="gt_row gt_right">1.0000</td>
+      <td class="gt_row gt_right">0.1257</td>
+      <td class="gt_row gt_right">0</td>
+      <td class="gt_row gt_right">0.695</td>
+      <td class="gt_row gt_right">0.0691</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">Class 3 - Aware, on ART</td>
+      <td class="gt_row gt_right">0.3226</td>
+      <td class="gt_row gt_right">0.6071</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0.0000</td>
+      <td class="gt_row gt_right">0</td>
+      <td class="gt_row gt_right">0.000</td>
+      <td class="gt_row gt_right">0.1226</td>
+    </tr>
+  </tbody>
+  
+  
+</table></div>
 <pre class="r"><code>transpose_class = t(outcomep) %&gt;% 
   data.frame() %&gt;% 
   tibble(Predictor = row.names(.)) %&gt;% 
@@ -853,18 +1230,10 @@ lca_out_full = postClassProbs(awareARTVL.lca3) %&gt;%
 ##     1  125 2667</code></pre>
 <pre class="r"><code>sensitbl = tibble(name = c(&quot;Sensitivity&quot;, &quot;Specificity&quot;, &quot;PPV&quot;, &quot;NPV&quot;),
                   value = c(round(2667/2667, 2), round(714/839, 2), round(2667/2792, 2), round(714/714)))
-gtbl = gt(sensitbl)
+gtbl.aware = gt(sensitbl)
 
 
-gt_tbl &lt;- 
-  gtbl %&gt;% 
-  # gt(rowname_col = &quot;Sensitivity&quot;)
-  tab_row_group(group = &quot;doctor&quot;,
-                rows = c(1:2)) %&gt;%
-  tab_row_group(group = &quot;patient&quot;,
-                rows = c(3:4))
-
-gt_tbl</code></pre>
+gtbl.aware</code></pre>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -1210,8 +1579,13 @@ gt_tbl</code></pre>
     </tr>
   </thead>
   <tbody class="gt_table_body">
-    <tr class="gt_group_heading_row">
-      <td colspan="2" class="gt_group_heading">patient</td>
+    <tr>
+      <td class="gt_row gt_left">Sensitivity</td>
+      <td class="gt_row gt_right">1.00</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">Specificity</td>
+      <td class="gt_row gt_right">0.85</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">PPV</td>
@@ -1220,17 +1594,6 @@ gt_tbl</code></pre>
     <tr>
       <td class="gt_row gt_left">NPV</td>
       <td class="gt_row gt_right">1.00</td>
-    </tr>
-    <tr class="gt_group_heading_row">
-      <td colspan="2" class="gt_group_heading">doctor</td>
-    </tr>
-    <tr>
-      <td class="gt_row gt_left">Sensitivity</td>
-      <td class="gt_row gt_right">1.00</td>
-    </tr>
-    <tr>
-      <td class="gt_row gt_left">Specificity</td>
-      <td class="gt_row gt_right">0.85</td>
     </tr>
   </tbody>
   
@@ -1248,18 +1611,10 @@ gt_tbl</code></pre>
 ## 1             149 2349</code></pre>
 <pre class="r"><code>vlsupprestbl = tibble(name = c(&quot;Sensitivity&quot;, &quot;Specificity&quot;, &quot;PPV&quot;, &quot;NPV&quot;),
                   value = c(round(2349/2349, 2), round(1008/1157, 2), round(2349/2498, 2), round(1008/1008, 2)))
-gtbl = gt(vlsupprestbl)
+gtbl.vls = gt(vlsupprestbl)
 
 
-gt_tbl &lt;- 
-  gtbl %&gt;% 
-  # gt(rowname_col = &quot;Sensitivity&quot;)
-  tab_row_group(group = &quot;doctor&quot;,
-                rows = c(1:2)) %&gt;%
-  tab_row_group(group = &quot;patient&quot;,
-                rows = c(3:4))
-
-gt_tbl</code></pre>
+gtbl.vls</code></pre>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -1605,8 +1960,13 @@ gt_tbl</code></pre>
     </tr>
   </thead>
   <tbody class="gt_table_body">
-    <tr class="gt_group_heading_row">
-      <td colspan="2" class="gt_group_heading">patient</td>
+    <tr>
+      <td class="gt_row gt_left">Sensitivity</td>
+      <td class="gt_row gt_right">1.00</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">Specificity</td>
+      <td class="gt_row gt_right">0.87</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">PPV</td>
@@ -1615,17 +1975,6 @@ gt_tbl</code></pre>
     <tr>
       <td class="gt_row gt_left">NPV</td>
       <td class="gt_row gt_right">1.00</td>
-    </tr>
-    <tr class="gt_group_heading_row">
-      <td colspan="2" class="gt_group_heading">doctor</td>
-    </tr>
-    <tr>
-      <td class="gt_row gt_left">Sensitivity</td>
-      <td class="gt_row gt_right">1.00</td>
-    </tr>
-    <tr>
-      <td class="gt_row gt_left">Specificity</td>
-      <td class="gt_row gt_right">0.87</td>
     </tr>
   </tbody>
   
@@ -1647,15 +1996,7 @@ gt_tbl</code></pre>
 gtbl = gt(notonartbl)
 
 
-gt_tbl &lt;- 
-  gtbl %&gt;% 
-  # gt(rowname_col = &quot;Sensitivity&quot;)
-  tab_row_group(group = &quot;doctor&quot;,
-                rows = c(1:2)) %&gt;%
-  tab_row_group(group = &quot;patient&quot;,
-                rows = c(3:4))
-
-gt_tbl</code></pre>
+gtbl</code></pre>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -2001,8 +2342,13 @@ gt_tbl</code></pre>
     </tr>
   </thead>
   <tbody class="gt_table_body">
-    <tr class="gt_group_heading_row">
-      <td colspan="2" class="gt_group_heading">patient</td>
+    <tr>
+      <td class="gt_row gt_left">Sensitivity</td>
+      <td class="gt_row gt_right">1.00</td>
+    </tr>
+    <tr>
+      <td class="gt_row gt_left">Specificity</td>
+      <td class="gt_row gt_right">0.92</td>
     </tr>
     <tr>
       <td class="gt_row gt_left">PPV</td>
@@ -2011,17 +2357,6 @@ gt_tbl</code></pre>
     <tr>
       <td class="gt_row gt_left">NPV</td>
       <td class="gt_row gt_right">1.00</td>
-    </tr>
-    <tr class="gt_group_heading_row">
-      <td colspan="2" class="gt_group_heading">doctor</td>
-    </tr>
-    <tr>
-      <td class="gt_row gt_left">Sensitivity</td>
-      <td class="gt_row gt_right">1.00</td>
-    </tr>
-    <tr>
-      <td class="gt_row gt_left">Specificity</td>
-      <td class="gt_row gt_right">0.92</td>
     </tr>
   </tbody>
   

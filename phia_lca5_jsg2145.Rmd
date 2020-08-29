@@ -118,7 +118,7 @@ colnames(outcomep) <- names(aware_patterns)
 
 OutcomeProbs.Table.AwareART <- as.data.frame( cbind( Class = c("Class 1 - Unaware", "Class 2 - Aware, not on ART", "Class 3 - Aware, on ART"), outcomep)) %>%
   mutate(across(-Class, as.numeric))
-OutcomeProbs.Table.AwareART
+gt(OutcomeProbs.Table.AwareART)
 ```
 
 ```{r}
@@ -175,18 +175,10 @@ xtabs(~aware + unaware, data = full_dat_out, exclude = "99")
 ```{r}
 sensitbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
                   value = c(round(2667/2667, 2), round(714/839, 2), round(2667/2792, 2), round(714/714)))
-gtbl = gt(sensitbl)
+gtbl.aware = gt(sensitbl)
 
 
-gt_tbl <- 
-  gtbl %>% 
-  # gt(rowname_col = "Sensitivity")
-  tab_row_group(group = "doctor",
-                rows = c(1:2)) %>%
-  tab_row_group(group = "patient",
-                rows = c(3:4))
-
-gt_tbl
+gtbl.aware
 ```
 
 ## on ART
@@ -200,18 +192,10 @@ xtabs(~ art + vlsaware, data = full_dat_out, exclude = "99") %>%
 ```{r}
 vlsupprestbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
                   value = c(round(2349/2349, 2), round(1008/1157, 2), round(2349/2498, 2), round(1008/1008, 2)))
-gtbl = gt(vlsupprestbl)
+gtbl.vls = gt(vlsupprestbl)
 
 
-gt_tbl <- 
-  gtbl %>% 
-  # gt(rowname_col = "Sensitivity")
-  tab_row_group(group = "doctor",
-                rows = c(1:2)) %>%
-  tab_row_group(group = "patient",
-                rows = c(3:4))
-
-gt_tbl
+gtbl.vls
 ```
 
 ## Aware - not on ART
@@ -229,15 +213,7 @@ notonartbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
 gtbl = gt(notonartbl)
 
 
-gt_tbl <- 
-  gtbl %>% 
-  # gt(rowname_col = "Sensitivity")
-  tab_row_group(group = "doctor",
-                rows = c(1:2)) %>%
-  tab_row_group(group = "patient",
-                rows = c(3:4))
-
-gt_tbl
+gtbl
 ```
 
 # Calculating Prevalence using confusionMatrix()
