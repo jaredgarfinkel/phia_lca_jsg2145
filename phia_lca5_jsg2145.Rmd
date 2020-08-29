@@ -1,0 +1,197 @@
+---
+title: "phia_lca5_jsg2145"
+author: "Jared Garfinkel"
+date: "8/28/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(randomLCA)
+library(gt)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+## read in data
+
+```{r, echo = FALSE, results = 'hide', cache = TRUE, warning = FALSE}
+# Load in PHIA data
+
+recode_one_zero <- function(x) {
+  if_else( is.na(x), 99,
+  if_else( as.numeric(x) %in% c(0, 2), 0, # JSG
+  if_else( as.numeric(x) == 1, 1, 99)
+  ))
+}
+
+## read in data
+bio <- read_csv("./data/zimphia2015adultbio.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt, -resultvlc), ~as.numeric(.x)))
+ind <- read_csv("./data/zimphia2015adultind.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt), ~as.numeric(.x)))
+
+bio_select <- bio %>% 
+    left_join(ind, by = c("personid", "country", "householdid", "centroidid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>% 
+    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+    mutate( resultvlc = recode(resultvlc, 
+                               "ND" = "1",
+                               "NQ: < 20" = "20",
+                               "NQ: < 182" = "182"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2, missing = 2)) # JSG (from Stephen)
+
+#table(vls = bio_select$vls, vl_lt_200 = bio_select$vl_lt_200)
+# head(ind)
+# head(bio)
+# head(bio_select)
+# str(ind$bt_status)
+# bio$varstrat
+# bio_select %>%
+#   select(ends_with("y"))
+# bio_select %>%
+#   group_by(resultvlc) %>%
+#   nest() %>%
+#   filter(str_detect(resultvlc, "[:alpha:]"))
+# which(is.na(bio_select$resultvlc == TRUE))
+# bio_select$resultvlc
+```
+
+
+```{r}
+bio_select_mod <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero))
+
+bio_select_var = bio %>% 
+  filter(bt_status == 1,
+         hivstatusfinal == 1) %>% 
+  select(personid, awareartselfreported)
+
+# nrow(bio_select_var) # 3507
+```
+
+## LCA, abridged
+
+```{r}
+modelvars <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+
+awareARTVL.lca3 <- randomLCA(aware_patterns, nclass = 3, quadpoints = 30)
+
+outcomep <- round(awareARTVL.lca3$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns)
+```
+
+```{r nclasses full model, cache = TRUE}
+# outcome = NULL
+# for (i in 1:6) {
+#   outcome[[i]] = aware_patterns %>% 
+#     randomLCA(., freq = .$freq, nclass = i)
+# }
+# 
+# BIC = NULL
+# for(i in 1:5) {
+#   BIC[[i]] = BIC(outcome[[i]])
+# }
+# 
+# bic_data = NULL
+# for (i in 1:5) {
+#   bic_data[[i]] =  
+#     data.frame(nclasses = i,
+#                bic = BIC[[i]])
+# }
+# 
+# tibble(bic_data) %>% 
+#   unnest() %>% 
+#   knitr::kable()
+```
+
+## extract classes
+
+```{r}
+lca_out_full = postClassProbs(awareARTVL.lca3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)),
+         unaware = if_else(class == 1, 0, 1), # coded "backwards" meaning 0 is unaware, 1 is not unaware
+         artaware = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, neither unaware nor aware and not on art - in terms of  class, this means that an individual may be EITHER "aware AND on art" OR unaware
+         vlsaware = if_else(class == 3, 1, 0)) # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+```
+
+```{r}
+full_dat_out = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_full, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200"))
+
+```
+
+```{r}
+xtabs(~aware + unaware, data = full_dat_out)
+```
+
+
+```{r}
+sensitbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
+                  value = c(round(2667/2667, 2), round(714/839, 2), round(2667/2792, 2), round(714/714)))
+gtbl = gt(sensitbl)
+gtbl
+
+gt_tbl <- 
+  gtbl %>% 
+  # gt(rowname_col = "Sensitivity")
+  tab_row_group(group = "doctor",
+                rows = c(1:2)) %>%
+  tab_row_group(group = "patient",
+                rows = c(3:4))
+```
+
+
+```{r}
+xtabs(~ art + artaware, data = full_dat_out) %>% 
+  ftable(.)
+```
+
+```{r}
+xtabs(~vlunder200 + vlsaware, data = full_dat_out)
+```
+
+```{r}
+xtabs(~awareartselfreported.y + class, data = full_dat_out)
+```
+
