@@ -153,8 +153,15 @@ full_dat_out = bio_select_mod %>%
 
 ```
 
+The agreement between variables is uncanny
+
 ```{r}
-xtabs(~aware + unaware, data = full_dat_out)
+xtabs(~awareartselfreported.y + class, data = full_dat_out, exclude = "99")
+```
+
+
+```{r}
+xtabs(~aware + unaware, data = full_dat_out, exclude = "99")
 ```
 
 
@@ -177,7 +184,7 @@ gt_tbl
 
 
 ```{r}
-xtabs(~ art + vlsaware, data = full_dat_out) %>% 
+xtabs(~ art + vlsaware, data = full_dat_out, exclude = "99") %>% 
   ftable(.)
 ```
 
@@ -206,10 +213,6 @@ xtabs(~ art + awarenotart + unaware, data = full_dat_out, exclude = "99") %>%
 ```
 
 ```{r}
-xtabs(~awareartselfreported.y + class, data = full_dat_out)
-```
-
-```{r}
 notonartbl = tibble(name = c("Sensitivity", "Specificity", "PPV", "NPV"),
                   value = c(round(2349/2349, 2), round(714/839, 2), round(2349/2474, 2), round(714/714, 2)))
 gtbl = gt(notonartbl)
@@ -225,3 +228,4 @@ gt_tbl <-
 
 gt_tbl
 ```
+
