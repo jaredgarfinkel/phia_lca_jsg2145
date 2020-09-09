@@ -861,3 +861,15 @@ NOTE: For some reason the vlunder200 full model performs slightly better than th
 However, in a simpler model, the arvstatus simpler model performs better than the vlunder200 simpler model.
 
 The major improvement is from the simpler model to the full model in the tri90art accuracy.
+
+# check BIC
+
+```{r}
+tibble("3_classes" = 
+         list(BIC(aware.lca_simple),BIC(awareARTVL.lca3),BIC(awareART.lca3),BIC(aware.lca_simpler_vl),NA),
+       "variable_3" = list("lca_nolabdat","lca_vlunder200","lca_arvstatus","lca_simple_vlunder200","5"),
+       "4_classes" = list(BIC(aware.lca_simpler_vl2),BIC(aware.lca_simpler_arv),BIC(aware.lca_simple4),BIC(awareARTVL.lca4),BIC(awareART.lca4)),
+       "variable_4" = list("lca_simple_vlunder200", "lca_simple_arvstatus","lca_nolabdat","lca_vlunder200","lca_arvstatus")) %>% 
+  unnest()
+```
+

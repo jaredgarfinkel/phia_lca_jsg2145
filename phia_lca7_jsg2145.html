@@ -6545,6 +6545,23 @@ cMat</code></pre>
 </div>
 </div>
 </div>
+<div id="check-bic" class="section level1">
+<h1>check BIC</h1>
+<pre class="r"><code>tibble(&quot;3_classes&quot; = 
+         list(BIC(aware.lca_simple),BIC(awareARTVL.lca3),BIC(awareART.lca3),BIC(aware.lca_simpler_vl),NA),
+       &quot;variable_3&quot; = list(&quot;lca_nolabdat&quot;,&quot;lca_vlunder200&quot;,&quot;lca_arvstatus&quot;,&quot;lca_simple_vlunder200&quot;,&quot;5&quot;),
+       &quot;4_classes&quot; = list(BIC(aware.lca_simpler_vl2),BIC(aware.lca_simpler_arv),BIC(aware.lca_simple4),BIC(awareARTVL.lca4),BIC(awareART.lca4)),
+       &quot;variable_4&quot; = list(&quot;lca_simple_vlunder200&quot;, &quot;lca_simple_arvstatus&quot;,&quot;lca_nolabdat&quot;,&quot;lca_vlunder200&quot;,&quot;lca_arvstatus&quot;)) %&gt;% 
+  unnest()</code></pre>
+<pre><code>## # A tibble: 5 x 4
+##   `3_classes` variable_3            `4_classes` variable_4           
+##         &lt;dbl&gt; &lt;chr&gt;                       &lt;dbl&gt; &lt;chr&gt;                
+## 1      10128. lca_nolabdat               11219. lca_simple_vlunder200
+## 2      12958. lca_vlunder200             10290. lca_simple_arvstatus 
+## 3      12012. lca_arvstatus               9439. lca_nolabdat         
+## 4      11730. lca_simple_vlunder200      12268. lca_vlunder200       
+## 5         NA  5                          11329. lca_arvstatus</code></pre>
+</div>
 
 
 
