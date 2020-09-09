@@ -185,8 +185,8 @@ gtbl.aware
 
 The prevalence can be calculated as `r round(2349/3506, 2)`, but this includes those who are unaware.
 ```{r}
-xtabs(~ art + vlsaware, data = full_dat_out, exclude = "99") %>% 
-  ftable(.)
+xtabs(~ art + unaware + vlsaware, data = full_dat_out, exclude = "99") %>% 
+  ftable(col.vars = c(2:3))
 ```
 
 ```{r}

@@ -1,0 +1,863 @@
+---
+title: "phia_lca7_jsg2145"
+author: "Jared Garfinkel"
+date: "9/9/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(randomLCA)
+library(gt)
+library(caret)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+## read in data
+
+```{r, echo = FALSE, results = 'hide', cache = FALSE, warning = FALSE}
+# Load in PHIA data
+
+recode_one_zero <- function(x) {
+  if_else( is.na(x), 99,
+  if_else( as.numeric(x) %in% c(0, 2), 0, # JSG
+  if_else( as.numeric(x) == 1, 1, 99)
+  ))
+}
+
+## read in data
+bio <- read_csv("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\zimphia2015adultbio.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt, -resultvlc), ~as.numeric(.x)))
+ind <- read_csv("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\zimphia2015adultind.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt), ~as.numeric(.x)))
+
+bio_select <- bio %>% 
+    left_join(ind, by = c("personid", "country", "householdid", "centroidid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>% 
+    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+    mutate( resultvlc = recode(resultvlc, 
+                               "ND" = "1",
+                               "NQ: < 20" = "20",
+                               "NQ: < 182" = "182"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2, missing = 2)) # JSG (from Stephen)
+
+#table(vls = bio_select$vls, vl_lt_200 = bio_select$vl_lt_200)
+# head(ind)
+# head(bio)
+# head(bio_select)
+# str(ind$bt_status)
+# bio$varstrat
+# bio_select %>%
+#   select(ends_with("y"))
+# bio_select %>%
+#   group_by(resultvlc) %>%
+#   nest() %>%
+#   filter(str_detect(resultvlc, "[:alpha:]"))
+# which(is.na(bio_select$resultvlc == TRUE))
+# bio_select$resultvlc
+```
+
+## make the variables, save awareartselfreported for later
+
+```{r}
+bio_select_mod <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero))
+
+bio_select_var = bio %>% 
+  filter(bt_status == 1,
+         hivstatusfinal == 1) %>% 
+  select(personid, awareartselfreported)
+
+# nrow(bio_select_var) # 3507
+```
+
+## LCA for vlunder200-model, arvstatus-model, and simple-model
+
+### vlunder200
+
+```{r}
+modelvars <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareARTVL.lca3 <- randomLCA(aware_patterns, nclass = 3, quadpoints = 30)
+
+outcomep <- round(awareARTVL.lca3$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns)
+
+OutcomeProbs.Table.AwareARTVL <- as.data.frame( cbind( Class = c("Class 1 - Aware, not on ART", "Class 2 - Aware, on ART", "Class 3 - Unaware"), outcomep)) %>%
+  mutate(across(-Class, as.numeric))
+```
+
+### arvstatus
+
+```{r}
+modelvars_arv <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_arv <- bio_select_mod %>% 
+  select( all_of(modelvars_arv) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareART.lca3 <- randomLCA(aware_patterns_arv, nclass = 3, quadpoints = 30)
+
+outcomep <- round(awareART.lca3$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns_arv)
+
+OutcomeProbs.Table.AwareART <- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep)) %>%
+  mutate(across(-Class, as.numeric))
+```
+
+## extract classes
+
+```{r}
+set.seed(719)
+lca_out_full = postClassProbs(awareARTVL.lca3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)),
+         vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, "1" is NEITHER unaware NOR aware and not on art - in terms of  class, a "1" means that an individual may be EITHER "aware AND on art" OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unaware
+```
+
+```{r}
+set.seed(719)
+lca_out_full_arv = postClassProbs(awareART.lca3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)),
+         vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, "1" is NEITHER unaware NOR aware and not on art - in terms of  class, a "1" means that an individual may be EITHER "aware AND on art" OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unaware
+```
+
+
+```{r}
+full_dat_out = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_full, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200"))
+
+```
+
+```{r}
+full_dat_out_arv = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_full_arv, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus"))
+```
+
+```{r}
+class_out = full_join(full_dat_out, full_dat_out_arv, by = c("personid", "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus", "vlunder200", "awareartselfreported.y"))
+# nrow(class_out) # 3,507
+# nrow(full_dat_out) #3,507
+# nrow(full_dat_out_arv) # 3,507
+```
+
+# further tests, simple model, simpler model
+
+## no lab data
+
+```{r}
+modelvars_simple <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_simple <- bio_select_mod %>% 
+  select( all_of(modelvars_simple) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+aware.lca_simple <- randomLCA(aware_patterns_simple, nclass = 3, quadpoints = 30)
+
+outcomep <- round(aware.lca_simple$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns_simple)
+
+OutcomeProbs.Table.Aware <- as.data.frame( cbind( Class = c("Class 1 - Aware, not on ART", "Class 2 - Aware, on ART", "Class 3 - Unaware"), outcomep)) %>%
+  mutate(across(-Class, as.numeric))
+```
+
+## extract classes
+
+```{r}
+set.seed(719)
+lca_out_simple = postClassProbs(aware.lca_simple) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)),
+         vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, "1" is NEITHER unaware NOR aware and not on art - in terms of  class, a "1" means that an individual may be EITHER "aware AND on art" OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unaware
+```
+
+## append classes to dataframe
+
+```{r}
+simple_dat_out = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_simple, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care"))
+```
+
+## join simple dataframes with full dataframes
+
+```{r}
+simple_vls_class_out = full_join(full_dat_out, simple_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus", "awareartselfreported.y"))
+
+simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "awareartselfreported.y"))
+```
+
+## check the classes
+
+```{r}
+gt(OutcomeProbs.Table.AwareARTVL)
+gt(OutcomeProbs.Table.AwareART)
+gt(OutcomeProbs.Table.Aware)
+
+```
+
+
+```{r}
+xtabs(~class.x + class.y, data = simple_vls_class_out)
+
+xtabs(~class.x + class.y, data = simple_arv_class_out)
+```
+
+## awareartselfreported
+
+```{r}
+xtabs(~awareartselfreported.y + class, data = simple_dat_out, exclude = "99")
+
+xtabs(~awareartselfreported.y + class, data = full_dat_out, exclude = "99")
+
+xtabs(~awareartselfreported.y + class, data = full_dat_out_arv, exclude = "99")
+```
+
+## compare models to tri90 variables
+
+### tri90aware vs. LCA model using arvstatus
+
+```{r}
+conmat_aware_df_arv = full_dat_out_arv
+
+# 1 - aware on art
+# 2 - aware not on art
+# 3 - unaware
+
+conmat_aware_df_arv$class = factor(conmat_aware_df_arv$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
+conmat_aware_df_arv$tri90aware = factor(conmat_aware_df_arv$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(conmat_aware_df_arv$class, conmat_aware_df_arv$tri90aware, positive = "aware")
+cMat
+```
+
+```{r}
+conmat_aware_df = full_dat_out
+
+# unique(full_dat_out$arvstatus)
+
+conmat_aware_df$class = factor(conmat_aware_df$class, levels = c("aware - not on art" = 1, "aware - on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
+conmat_aware_df$tri90aware = factor(conmat_aware_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$tri90aware, positive = "aware")
+cMat
+```
+
+```{r}
+simple_conmat_df = simple_dat_out
+
+simple_conmat_df$class = factor(simple_conmat_df$class, levels = c("aware - not on art" = 1, "aware - on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
+simple_conmat_df$tri90aware = factor(simple_conmat_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(simple_conmat_df$class, simple_conmat_df$tri90aware, positive = "aware")
+cMat
+
+```
+
+## tri90art
+
+```{r}
+conmat_aware_df_arv = full_dat_out_arv
+
+# unique(full_dat_out_arv$arvstatus)
+
+conmat_aware_df_arv$class = factor(conmat_aware_df_arv$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("on art", "not on art", "not on art"))
+conmat_aware_df_arv$tri90art = factor(conmat_aware_df_arv$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(conmat_aware_df_arv$class, conmat_aware_df_arv$tri90art, positive = "on art")
+cMat
+```
+
+```{r}
+conmat_aware_df = full_dat_out
+
+# unique(full_dat_out$arvstatus)
+
+conmat_aware_df$class = factor(conmat_aware_df$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("on art", "not on art", "not on art"))
+conmat_aware_df$tri90art = factor(conmat_aware_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$tri90art, positive = "on art")
+cMat
+```
+
+```{r}
+simple_conmat_df = simple_dat_out
+
+simple_conmat_df$class = factor(simple_conmat_df$class, levels = c("aware - not on art" = 1, "aware - on art" = 2, "unaware" = 3), labels = c("not on art", "on art", "not on art"))
+simple_conmat_df$tri90art = factor(simple_conmat_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(simple_conmat_df$class, simple_conmat_df$tri90art, positive = "on art")
+cMat
+
+```
+
+# simpler model
+
+## LCA, simpler
+
+### vlunder200
+
+```{r}
+modelvars_simpler_vl <- c( "never_tested", "reported_negative", "reported_positive", "arvscurrent", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_simpler_vl <- bio_select_mod %>% 
+  select( all_of(modelvars_simpler_vl) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+aware.lca_simpler_vl <- randomLCA(aware_patterns_simpler_vl, nclass = 3, quadpoints = 30)
+
+outcomep <- round(aware.lca_simpler_vl$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns_simpler_vl)
+
+OutcomeProbs.Table.Aware_simpler_vl <- as.data.frame( cbind( Class = c("Class 1 - Aware, not on ART", "Class 2 - Aware, on ART", "Class 3 - Unaware"), outcomep)) %>%
+  mutate(across(-Class, as.numeric))
+```
+
+### arvstatus
+
+```{r}
+modelvars_simpler_arv <- c( "never_tested", "reported_negative", "reported_positive", "arvscurrent", "arvstatus")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_simpler_arv <- bio_select_mod %>% 
+  select( all_of(modelvars_simpler_arv) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+aware.lca_simpler_arv <- randomLCA(aware_patterns_simpler_arv, nclass = 4, quadpoints = 30)
+
+outcomep_simpler_arv <- round(aware.lca_simpler_arv$outcomep, 4)
+colnames(outcomep_simpler_arv) <- names(aware_patterns_simpler_arv)
+
+OutcomeProbs.Table.Aware_simpler_arv <- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_simpler_arv)) %>%
+  mutate(across(-Class, as.numeric))
+```
+
+
+## extract classes
+
+```{r}
+set.seed(719)
+lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)))
+         # vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         # awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, "1" is NEITHER unaware NOR aware and not on art - in terms of  class, a "1" means that an individual may be EITHER "aware AND on art" OR unaware
+         # unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unaware
+```
+
+### What are the classes in the simpler vl model?
+
+They don't seem to make much sense. Perhaps the first one is never tested, reported positive, not on arvs. The second one is reported negative, not on arvs, and the third one is reported positive, on arvs.
+
+Maybe 2 classes would work better...
+
+```{r}
+gt(OutcomeProbs.Table.Aware_simpler_vl)
+```
+
+## simpler model with 4 classes
+
+It appears 4 classes seems to do the trick...class 1 - never tested, class 2 - reported negative, class 3, aware not on art, class 4, aware on art.
+
+### vlunder200
+
+```{r}
+modelvars_simpler_vl <- c( "never_tested", "reported_negative", "reported_positive", "arvscurrent", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_simpler_vl <- bio_select_mod %>% 
+  select( all_of(modelvars_simpler_vl) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+aware.lca_simpler_vl2 <- randomLCA(aware_patterns_simpler_vl, nclass = 4, quadpoints = 30)
+
+outcomep_svl2 <- round(aware.lca_simpler_vl2$outcomep, 4)
+colnames(outcomep_svl2) <- names(aware_patterns_simpler_vl)
+
+OutcomeProbs.Table.Aware_simpler_vl2 <- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_svl2)) %>%
+  mutate(across(-Class, as.numeric))
+gt(OutcomeProbs.Table.Aware_simpler_vl2)
+```
+
+## worth a try to add another class?
+
+classes would apparently be: 1 - aware, not on art; 2 - reported negative; 3 - never tested; 4 - aware on art.
+
+```{r}
+modelvars <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareARTVL.lca4 <- randomLCA(aware_patterns, nclass = 4, quadpoints = 30)
+
+outcomep4 <- round(awareARTVL.lca4$outcomep, 4)
+colnames(outcomep4) <- names(aware_patterns)
+
+OutcomeProbs.Table.AwareARTVL4 <- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep4)) %>%
+  mutate(across(-Class, as.numeric))
+gt(OutcomeProbs.Table.AwareARTVL4)
+```
+
+For the arvstatus-model, classes could be viewed as: 1 - never tested; 2 - aware on art; 3 - aware not on art; 4 - reported negative
+
+This might actually work...?
+
+```{r}
+modelvars <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_arv4 <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareART.lca4 <- randomLCA(aware_patterns_arv4, nclass = 4, quadpoints = 30)
+
+outcomep_arv4 <- round(awareART.lca4$outcomep, 4)
+colnames(outcomep_arv4) <- names(aware_patterns_arv4)
+
+OutcomeProbs.Table.AwareART4 <- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_arv4)) %>%
+  mutate(across(-Class, as.numeric))
+gt(OutcomeProbs.Table.AwareART4)
+```
+
+For the simpler model (no lab work), the classes are: 1- aware on art; 2 - reported negative; 3 - aware not on art; and 4 - never tested.
+
+Okay, so let's compare them.
+
+```{r}
+modelvars_simple <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care")
+# Remove all rows which have values other than 0 or 1
+aware_patterns_simple4 <- bio_select_mod %>% 
+  select( all_of(modelvars_simple) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+aware.lca_simple4 <- randomLCA(aware_patterns_simple, nclass = 4, quadpoints = 30)
+
+outcomep_simple4 <- round(aware.lca_simple4$outcomep, 4)
+colnames(outcomep_simple4) <- names(aware_patterns_simple4)
+
+OutcomeProbs.Table.Aware4 <- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_simple4)) %>%
+  mutate(across(-Class, as.numeric))
+gt(OutcomeProbs.Table.Aware4)
+```
+
+## extract classes from the models with 4 LCA classes
+
+```{r}
+# simpler_vl2 - 4 variables + lab data
+set.seed(719)
+lca_out_simpler_vl2 = postClassProbs(aware.lca_simpler_vl2) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 1,
+                                         if_else(class_4 > class_1, 4, 1)),
+                                 if_else(class_3 > class_1,
+                                         if_else(class_1 > class_4, 3,
+                                                 if_else(class_4 > class_3, 4, 3)),
+                                         if_else(class_1 > class_4, 1, 4))),
+                         if_else(class_2 > class_3, 
+                                 if_else(class_3 > class_4, 2,
+                                         if_else(class_4 > class_2, 4, 2)),
+                                 if_else(class_4 > class_3, 4, 3))))
+
+# simple - 5 SR variables, no lab data
+set.seed(719)
+lca_out_simple4 = postClassProbs(aware.lca_simple4) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 1,
+                                         if_else(class_4 > class_1, 4, 1)),
+                                 if_else(class_3 > class_1,
+                                         if_else(class_1 > class_4, 3,
+                                                 if_else(class_4 > class_3, 4, 3)),
+                                         if_else(class_1 > class_4, 1, 4))),
+                         if_else(class_2 > class_3, 
+                                 if_else(class_3 > class_4, 2,
+                                         if_else(class_4 > class_2, 4, 2)),
+                                 if_else(class_4 > class_3, 4, 3))))
+
+# vlunder200 - full model (7 variables), vlunder200
+set.seed(719)
+lca_out_vls4 = postClassProbs(awareARTVL.lca4) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 1,
+                                         if_else(class_4 > class_1, 4, 1)),
+                                 if_else(class_3 > class_1,
+                                         if_else(class_1 > class_4, 3,
+                                                 if_else(class_4 > class_3, 4, 3)),
+                                         if_else(class_1 > class_4, 1, 4))),
+                         if_else(class_2 > class_3, 
+                                 if_else(class_3 > class_4, 2,
+                                         if_else(class_4 > class_2, 4, 2)),
+                                 if_else(class_4 > class_3, 4, 3))))
+
+# arvstatus - full model (7 variables), arvstatus
+set.seed(719)
+lca_out_art4 = postClassProbs(awareART.lca4) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 1,
+                                         if_else(class_4 > class_1, 4, 1)),
+                                 if_else(class_3 > class_1,
+                                         if_else(class_1 > class_4, 3,
+                                                 if_else(class_4 > class_3, 4, 3)),
+                                         if_else(class_1 > class_4, 1, 4))),
+                         if_else(class_2 > class_3, 
+                                 if_else(class_3 > class_4, 2,
+                                         if_else(class_4 > class_2, 4, 2)),
+                                 if_else(class_4 > class_3, 4, 3))))
+
+# simpler model (5 variables), arvstatus
+set.seed(719)
+lca_out_simpler_arv = postClassProbs(aware.lca_simpler_arv) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 1,
+                                         if_else(class_4 > class_1, 4, 1)),
+                                 if_else(class_3 > class_1,
+                                         if_else(class_1 > class_4, 3,
+                                                 if_else(class_4 > class_3, 4, 3)),
+                                         if_else(class_1 > class_4, 1, 4))),
+                         if_else(class_2 > class_3, 
+                                 if_else(class_3 > class_4, 2,
+                                         if_else(class_4 > class_2, 4, 2)),
+                                 if_else(class_4 > class_3, 4, 3))))
+```
+
+## compare to simple, vlunder200, arvstatus-models
+
+```{r}
+simpler_vl2_dat_out = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_simpler_vl2, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvscurrent", "vlunder200"))
+```
+
+```{r}
+full_dat_out4 = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_vls4, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200"))
+
+```
+
+```{r}
+full_dat_out_arv4 = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_art4, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus"))
+```
+
+```{r}
+simple_out4 = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_simple4, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care"))
+```
+
+```{r}
+simpler_vl2_vls_class_out = full_join(full_dat_out4, simpler_vl2_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "arvscurrent", "arvstatus", "awareartselfreported.y"))
+
+simpler_vl2_arv_class_out = full_join(full_dat_out_arv4, simpler_vl2_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "vlunder200", "arvscurrent", "awareartselfreported.y"))
+
+simpler_vl2_simple_class_out = full_join(simple_out4, simpler_vl2_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "vlunder200", "arvscurrent", "arvstatus", "awareartselfreported.y"))
+
+vls_arv_class_out = full_join(full_dat_out4, full_dat_out_arv4, by = c("personid", "never_tested", "reported_negative", "reported_positive", "vlunder200", "arvstatus", "arvscurrent", "awareartselfreported.y"))
+```
+
+## cross tabulation
+
+Let's check the full datasets first out of curiosity.
+
+There is similar agreement between classes to the 3 class model.
+
+```{r}
+xtabs(~class.x + class.y, data = vls_arv_class_out)
+```
+
+What about other models? (comparing simplified models - no lab data, or fewer variables)
+
+There are more disagreements between classes. But, how about against tri90 variables?
+
+It seems much of the disagreement in classes is in class 3.
+
+```{r}
+xtabs(~class.x + class.y, data = simpler_vl2_vls_class_out)
+
+xtabs(~class.x + class.y, data = simpler_vl2_arv_class_out)
+
+xtabs(~class.x + class.y, data = simpler_vl2_simple_class_out)
+```
+
+## Reminder of class labels for each LCA output
+
+```{r}
+gt(OutcomeProbs.Table.Aware4)
+gt(OutcomeProbs.Table.AwareART4)
+gt(OutcomeProbs.Table.AwareARTVL4)
+gt(OutcomeProbs.Table.Aware_simpler_vl2)
+```
+
+## fewer variables model, vlunder200
+
+```{r}
+simpler_vl2_conmat_df = simpler_vl2_dat_out
+
+# 1 - never tested
+# 2 - reported negative
+# 3 - aware not on art
+# 4 = aware on art
+
+simpler_vl2_conmat_df$class = factor(simpler_vl2_conmat_df$class, levels = c("never tested" = 1, "reported negative" = 2, "aware not on art" = 3, "aware on art" = 4), labels = c("unaware", "unaware", "aware", "aware"))
+simpler_vl2_conmat_df$tri90aware = factor(simpler_vl2_conmat_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(simpler_vl2_conmat_df$class, simpler_vl2_conmat_df$tri90aware, positive = "aware")
+cMat
+```
+
+```{r}
+simpler_vl2_conmat_df = simpler_vl2_dat_out
+
+# 1 - never tested
+# 2 - reported negative
+# 3 - aware not on art
+# 4 = aware on art
+
+simpler_vl2_conmat_df$class = factor(simpler_vl2_conmat_df$class, levels = c("never tested" = 1, "reported negative" = 2, "aware not on art" = 3, "aware on art" = 4), labels = c("not on art", "not on art", "not on art", "on art"))
+simpler_vl2_conmat_df$tri90art = factor(simpler_vl2_conmat_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(simpler_vl2_conmat_df$class, simpler_vl2_conmat_df$tri90art, positive = "on art")
+cMat
+```
+
+## no lab data model
+
+```{r}
+simple_out4_conmat_df = simple_out4
+
+# 1 - aware on art
+# 2 - reported negative
+# 3 - aware not on art
+# 4 = never tested
+
+simple_out4_conmat_df$class = factor(simple_out4_conmat_df$class, levels = c("aware on art" = 1, "reported negative" = 2, "aware not on art" = 3, "never tested" = 4), labels = c("on art", "not on art", "not on art", "not on art"))
+simple_out4_conmat_df$tri90art = factor(simple_out4_conmat_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(simple_out4_conmat_df$class, simple_out4_conmat_df$tri90art, positive = "on art")
+cMat
+```
+
+```{r}
+simple_out4_conmat_df = simple_out4
+
+# 1 - aware on art
+# 2 - reported negative
+# 3 - aware not on art
+# 4 = never tested
+
+simple_out4_conmat_df$class = factor(simple_out4_conmat_df$class, levels = c("aware on art" = 1, "reported negative" = 2, "aware not on art" = 3, "never tested" = 4), labels = c("aware", "unaware", "aware", "unaware"))
+simple_out4_conmat_df$tri90aware = factor(simple_out4_conmat_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(simple_out4_conmat_df$class, simple_out4_conmat_df$tri90aware, positive = "aware")
+cMat
+```
+
+## vlunder200 full model
+
+```{r}
+full_dat_out4_conmat_df = full_dat_out4
+
+# 1 - aware not on art
+# 2 - reported negative
+# 3 - never tested
+# 4 = aware on art
+
+full_dat_out4_conmat_df$class = factor(full_dat_out4_conmat_df$class, levels = c("aware not on art" = 1, "reported negative" = 2, "never tested" = 3, "aware on art" = 4), labels = c("aware", "unaware", "unaware", "aware"))
+full_dat_out4_conmat_df$tri90aware = factor(full_dat_out4_conmat_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(full_dat_out4_conmat_df$class, full_dat_out4_conmat_df$tri90aware, positive = "aware")
+cMat
+```
+
+```{r}
+full_dat_out4_conmat_df = full_dat_out4
+
+# 1 - aware not on art
+# 2 - reported negative
+# 3 - never tested
+# 4 = aware on art
+
+full_dat_out4_conmat_df$class = factor(full_dat_out4_conmat_df$class, levels = c("aware not on art" = 1, "reported negative" = 2, "never tested" = 3, "aware on art" = 4), labels = c("not on art", "not on art", "not on art", "on art"))
+full_dat_out4_conmat_df$tri90art = factor(full_dat_out4_conmat_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(full_dat_out4_conmat_df$class, full_dat_out4_conmat_df$tri90art, positive = "on art")
+cMat
+```
+
+## arvstatus model
+
+```{r}
+full_dat_arv4_conmat_df = full_dat_out_arv4
+
+# 1 - never tested
+# 2 - aware on art
+# 3 - aware not on art
+# 4 = reported negative
+
+full_dat_arv4_conmat_df$class = factor(full_dat_arv4_conmat_df$class, levels = c("never tested" = 1, "aware on art" = 2, "aware not on art" = 3, "reported negative" = 4), labels = c("unaware", "aware", "aware", "unaware"))
+full_dat_arv4_conmat_df$tri90aware = factor(full_dat_arv4_conmat_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(full_dat_arv4_conmat_df$class, full_dat_arv4_conmat_df$tri90aware, positive = "aware")
+cMat
+```
+
+```{r}
+full_dat_arv4_conmat_df = full_dat_out_arv4
+
+# 1 - never tested
+# 2 - aware on art
+# 3 - aware not on art
+# 4 = reported negative
+
+full_dat_arv4_conmat_df$class = factor(full_dat_arv4_conmat_df$class, levels = c("never tested" = 1, "aware on art" = 2, "aware not on art" = 3, "reported negative" = 4), labels = c("not on art", "on art", "not on art", "not on art"))
+full_dat_arv4_conmat_df$tri90art = factor(full_dat_arv4_conmat_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(full_dat_arv4_conmat_df$class, full_dat_arv4_conmat_df$tri90art, positive = "on art")
+cMat
+```
+
+## now with the simpler arvstatus model
+
+```{r}
+simpler_arv_dat_out = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_simpler_arv, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvscurrent", "arvstatus"))
+```
+
+
+```{r}
+simpler_arv_full_class_out = full_join(full_dat_out4, simpler_arv_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "arvscurrent", "arvstatus", "awareartselfreported.y"))
+
+simpler_arv_arv_class_out = full_join(full_dat_out_arv4, simpler_arv_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "vlunder200", "arvscurrent", "awareartselfreported.y"))
+
+simpler_arv_simple_class_out = full_join(simple_out4, simpler_arv_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "vlunder200", "arvscurrent", "arvstatus", "awareartselfreported.y"))
+
+simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, by = c("personid", "never_tested", "reported_negative", "reported_positive", "vlunder200", "arvstatus", "arvscurrent", "awareartselfreported.y"))
+```
+
+## simple models compared to each other
+
+Some disagreement. How about the other models?
+
+```{r}
+xtabs(~class.x + class.y, data = simpler_vls_arv_class_out)
+```
+
+Disagreement in class 4, sometimes class 3.
+
+```{r}
+xtabs(~class.x + class.y, data = simpler_arv_full_class_out)
+
+xtabs(~class.x + class.y, data = simpler_arv_arv_class_out)
+
+xtabs(~class.x + class.y, data = simpler_arv_simple_class_out)
+```
+
+## compare to tri90 variables
+
+### tri90aware
+
+#### cross-tabulation
+
+reminder of classes
+
+```{r}
+gt(OutcomeProbs.Table.Aware_simpler_arv)
+```
+
+
+```{r}
+simpler_arv_conmat_df = simpler_arv_dat_out
+
+# 1 - aware on art
+# 2 - never tested
+# 3 - reported negative
+# 4 - aware not on art
+
+simpler_arv_conmat_df$class = factor(simpler_arv_conmat_df$class, levels = c("aware on art" = 1, "never tested" = 2, "reported negative" = 3, "aware not on art" = 4), labels = c("on art", "not on art", "not on art", "not on art"))
+simpler_arv_conmat_df$tri90art = factor(simpler_arv_conmat_df$tri90art, c("on art" = 1, "not on art" = 0), labels = c("on art", "not on art"))
+cMat = caret::confusionMatrix(simpler_arv_conmat_df$class, simpler_arv_conmat_df$tri90art, positive = "on art")
+cMat
+```
+
+```{r}
+simpler_arv_conmat_df = simpler_arv_dat_out
+
+# 1 - aware on art
+# 2 - never tested
+# 3 - reported negative
+# 4 - aware not on art
+
+simpler_arv_conmat_df$class = factor(simpler_arv_conmat_df$class, levels = c("aware on art" = 1, "never tested" = 2, "reported negative" = 3, "aware not on art" = 4), labels = c("aware", "unaware", "unaware", "aware"))
+simpler_arv_conmat_df$tri90aware = factor(simpler_arv_conmat_df$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(simpler_arv_conmat_df$class, simpler_arv_conmat_df$tri90aware, positive = "aware")
+cMat
+```
+
+NOTE: For some reason the vlunder200 full model performs slightly better than the arvstatus full model in the tri90art variable.
+
+However, in a simpler model, the arvstatus simpler model performs better than the vlunder200 simpler model.
+
+The major improvement is from the simpler model to the full model in the tri90art accuracy.

@@ -1,0 +1,371 @@
+---
+title: "phia_lca6_jsg2145"
+author: "Jared Garfinkel"
+date: "9/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(randomLCA)
+library(gt)
+library(caret)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+## read in data
+
+```{r, echo = FALSE, results = 'hide', cache = FALSE, warning = FALSE}
+# Load in PHIA data
+
+recode_one_zero <- function(x) {
+  if_else( is.na(x), 99,
+  if_else( as.numeric(x) %in% c(0, 2), 0, # JSG
+  if_else( as.numeric(x) == 1, 1, 99)
+  ))
+}
+
+## read in data
+bio <- read_csv("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\zimphia2015adultbio.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt, -resultvlc), ~as.numeric(.x)))
+ind <- read_csv("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\zimphia2015adultind.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -centroidid, -surveystdt), ~as.numeric(.x)))
+
+bio_select <- bio %>% 
+    left_join(ind, by = c("personid", "country", "householdid", "centroidid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>% 
+    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+    mutate( resultvlc = recode(resultvlc, 
+                               "ND" = "1",
+                               "NQ: < 20" = "20",
+                               "NQ: < 182" = "182"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2, missing = 2)) # JSG (from Stephen)
+
+#table(vls = bio_select$vls, vl_lt_200 = bio_select$vl_lt_200)
+# head(ind)
+# head(bio)
+# head(bio_select)
+# str(ind$bt_status)
+# bio$varstrat
+# bio_select %>%
+#   select(ends_with("y"))
+# bio_select %>%
+#   group_by(resultvlc) %>%
+#   nest() %>%
+#   filter(str_detect(resultvlc, "[:alpha:]"))
+# which(is.na(bio_select$resultvlc == TRUE))
+# bio_select$resultvlc
+```
+
+
+```{r}
+bio_select_mod <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero))
+
+bio_select_var = bio %>% 
+  filter(bt_status == 1,
+         hivstatusfinal == 1) %>% 
+  select(personid, awareartselfreported)
+
+# nrow(bio_select_var) # 3507
+```
+
+## LCA, abridged
+
+### vlunder200
+
+```{r}
+modelvars <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareARTVL.lca3 <- randomLCA(aware_patterns, nclass = 3, quadpoints = 30)
+
+outcomep <- round(awareARTVL.lca3$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns)
+
+OutcomeProbs.Table.AwareART <- as.data.frame( cbind( Class = c("Class 1 - Unaware", "Class 2 - Aware, not on ART", "Class 3 - Aware, on ART"), outcomep)) %>%
+  mutate(across(-Class, as.numeric))
+gt(OutcomeProbs.Table.AwareART)
+```
+
+### arvstatus
+
+```{r}
+modelvars <- c( "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareART.lca3 <- randomLCA(aware_patterns, nclass = 3, quadpoints = 30)
+
+outcomep <- round(awareART.lca3$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns)
+
+OutcomeProbs.Table.AwareART <- as.data.frame( cbind( Class = c("Class 1 - Unaware", "Class 2 - Aware, not on ART", "Class 3 - Aware, on ART"), outcomep)) %>%
+  mutate(across(-Class, as.numeric))
+gt(OutcomeProbs.Table.AwareART)
+```
+
+## extract classes
+
+```{r}
+set.seed(719)
+lca_out_full_arv = postClassProbs(awareART.lca3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)),
+         vlsaware = if_else(class == 1, 1, 0), # coded "forwards" meaning 1 is aware on art, 0 is EITHER unaware OR "aware and not on art"
+         awarenotart = if_else(class == 2, 0, 1), # coded "backwards" meaning 0 is "aware not on art", 1 is not "aware not on art", or in other words, "1" is NEITHER unaware NOR aware and not on art - in terms of  class, a "1" means that an individual may be EITHER "aware AND on art" OR unaware
+         unaware = if_else(class == 3, 0, 1)) # coded "backwards" meaning 0 is unaware, 1 is not unaware
+```
+
+```{r}
+full_dat_out_arv = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_full_arv, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus"))
+```
+
+## compare lca models
+
+```{r, include = FALSE}
+full_dat_out = bio_select_mod %>% 
+  left_join(bio_select_var, by = "personid") %>% 
+  left_join(lca_out_full, copy = TRUE, by = c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200"))
+```
+
+
+```{r}
+class_out = full_join(full_dat_out, full_dat_out_arv, by = c("personid", "never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus", "vlunder200", "awareartselfreported.y"))
+# nrow(class_out) # 3,507
+# nrow(full_dat_out) #3,507
+# nrow(full_dat_out_arv) # 3,507
+```
+
+```{r}
+xtabs(~class.x + class.y, data = class_out)
+```
+
+check individuals that are classified differently?
+
+```{r}
+class_out %>% 
+  filter(class.y == 1,
+         class.x == 2) %>% 
+  select(personid, class.y, class.x, never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus, vlunder200)
+```
+
+They reported that they are not on arvs, but they had detectable arvs in their blood samples. Two of the 6 were viral load suppressed.
+
+```{r}
+xtabs(~awareartselfreported.y + class.y, data = class_out)
+```
+
+# confusion matrix
+
+## compare models
+
+```{r}
+conmat_df = class_out
+
+conmat_df$class.y = factor(conmat_aware_df$class.y, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3))
+conmat_df$class.x = factor(conmat_aware_df$class.x, c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3))
+cMat = caret::confusionMatrix(conmat_df$class.x, conmat_df$class.y, positive = "aware - on art")
+cMat
+```
+
+## compare models to tri90 variables
+
+### tri90aware vs. LCA model using arvstatus
+
+```{r}
+conmat_aware_df_arv = full_dat_out_arv
+
+unique(full_dat_out_arv$arvstatus)
+
+conmat_aware_df_arv$class = factor(conmat_aware_df_arv$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
+conmat_aware_df_arv$tri90aware = factor(conmat_aware_df_arv$tri90aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(conmat_aware_df_arv$tri90aware, conmat_aware_df_arv$class, positive = "aware")
+cMat
+```
+
+### compare to tri90aware vs. LCA model using vlunder200
+
+```{r}
+conmat_aware_df = full_dat_out
+
+length(full_dat_out$class)
+
+conmat_aware_df$class = factor(conmat_aware_df$class, levels = c("aware - on art" = 1, "aware - not on art" = 2, "unaware" = 3), labels = c("aware", "aware", "unaware"))
+conmat_aware_df$aware = factor(conmat_aware_df$aware, c("aware" = 1, "unaware" = 0), labels = c("aware", "unaware"))
+cMat = caret::confusionMatrix(conmat_aware_df$aware, conmat_aware_df$class, positive = "aware")
+cMat
+```
+
+# where are differences between LCA-aware and tri90aware?
+
+## model with vlunder200
+
+
+```{r}
+
+diff_df = full_dat_out %>% 
+  filter(class == 3,
+         tri90aware == 1)
+```
+
+125 respondents reported that they were not on arvs and `r full_dat_out %>% filter(class == 3, tri90aware == 1, reported_negative == 1) %>% nrow()` of these respondents reported that they were negative, while another `r full_dat_out %>% filter(class == 3, tri90aware == 1, never_tested == 1) %>% nrow()` reported never being tested. However, all of them had detectable arvs in their blood. Furthermore, `r full_dat_out %>% filter(class == 3, tri90aware == 1, vlunder200 == 1) %>% nrow()` were viral load suppressed.
+
+## compare to model with arvstatus
+
+All the personids are the same in both models. 
+
+```{r}
+full_dat_out_arv %>% 
+  filter(class == 3,
+         tri90aware == 1) %>% 
+  anti_join(diff_df, by = "personid")
+```
+
+# aware - not on art
+
+## model with vlunder
+
+```{r}
+diff_art = full_dat_out %>% 
+  filter(class == 2,
+         tri90art == 1)
+  # select(personid, class, tri90art, never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus, vlunder200)
+```
+
+## model with arvstatus
+
+There are no differences in the classifications
+
+```{r}
+full_dat_out_arv %>% 
+   filter(class == 2,
+         tri90art == 1) %>% 
+  anti_join(diff_art, by = "personid")
+```
+
+## aware - on art
+
+The model with vlunder200 and arvstatus had no false positives in tri90art 
+
+```{r}
+full_dat_out %>% 
+  filter(class == 1,
+         tri90art == 0) %>% 
+  select(personid, class, tri90art, never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus, vlunder200)
+```
+
+```{r}
+full_dat_out_arv %>% 
+  filter(class == 1,
+         tri90art == 0) %>% 
+  select(personid, class, tri90art, never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus, vlunder200)
+```
+
+There may be differences in the datasets defined by results that match in LCA outcomes and tri90 variables. Let's check.
+
+## Awareness
+
+```{r}
+same_aware = full_dat_out %>% 
+  filter(class %in% c(1, 2),
+         tri90aware == 1)
+
+same_aware_art = full_dat_out_arv %>% 
+  filter(class %in% c(1,2),
+         tri90aware == 1) 
+  # anti_join(same_aware, by = "personid") # empty
+
+full_dat_out %>% 
+  filter(class %in% c(1, 2),
+         tri90aware == 1) %>% 
+  anti_join(same_aware_art, by = "personid")
+```
+
+There are `r full_dat_out %>% filter(class %in% c(1, 2), tri90aware == 1) %>% anti_join(same_aware_art, by = "personid") %>% nrow()` more respondents in the dataset with vlunder200 than in the arvstatus dataset. There are none in the arvstatus dataset who do not appear in the vlunder200 dataset.
+
+## aware - not on art
+
+This dataset is defined by those who are LCA "aware - not on art", not tri90art, and who are tri90aware. 
+
+```{r}
+same_notart = full_dat_out %>% 
+  filter(class == 2,
+         tri90art == 0,
+         tri90aware == 1)
+
+same_notart_arv = full_dat_out_arv %>% 
+  filter(class == 2,
+         tri90aware == 1,
+         tri90art == 0) 
+  # anti_join(same_notart, by = "personid") # empty
+
+full_dat_out %>% 
+  filter(class == 2,
+         tri90aware == 1,
+         tri90art == 0) %>% 
+  anti_join(same_notart_arv, by = "personid")
+```
+
+There are`r full_dat_out %>% filter(class == 2, tri90aware == 1, tri90art == 0) %>% anti_join(same_notart_arv, by = "personid") %>% nrow()` more respondents in the dataset with vlunder than in the arvstatus dataset. There are none in the arvstatus dataset who do not appear in the vlunder200 dataset.
+
+```{r}
+same_art = full_dat_out %>% 
+  filter(class == 3,
+         tri90art == 1)
+
+same_art_arv = full_dat_out_arv %>% 
+  filter(class == 3,
+         tri90art == 1) 
+  # anti_join(same_art, by = "personid") # empty
+
+full_dat_out %>% 
+  filter(class == 3,
+         tri90art == 1) %>% 
+  anti_join(same_art_arv, by = "personid")
+```
+
+These were the same in both models.
