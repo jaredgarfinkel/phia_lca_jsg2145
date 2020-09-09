@@ -374,143 +374,37 @@ summary {
 </div>
 <div id="make-the-variables-save-awareartselfreported-for-later" class="section level2">
 <h2>make the variables, save awareartselfreported for later</h2>
-<pre class="r"><code>bio_select_mod &lt;- bio_select %&gt;%
-    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy &gt; 0, 1, 0, missing = 0),
-            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
-            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 &amp; hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
-            pos_test_year = if_else(hivtfposy &gt; 0, 1, 0),
-            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
-            cd4testever = recode_one_zero(cd4testever),
-            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
-            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
-            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
-            across(-personid, recode_one_zero))
-
-bio_select_var = bio %&gt;% 
-  filter(bt_status == 1,
-         hivstatusfinal == 1) %&gt;% 
-  select(personid, awareartselfreported)
-
-# nrow(bio_select_var) # 3507</code></pre>
 </div>
 <div id="lca-for-vlunder200-model-arvstatus-model-and-simple-model" class="section level2">
 <h2>LCA for vlunder200-model, arvstatus-model, and simple-model</h2>
 <div id="vlunder200" class="section level3">
 <h3>vlunder200</h3>
-<pre class="r"><code>modelvars &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;vlunder200&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-awareARTVL.lca3 &lt;- randomLCA(aware_patterns, nclass = 3, quadpoints = 30)
-
-outcomep &lt;- round(awareARTVL.lca3$outcomep, 4)
-colnames(outcomep) &lt;- names(aware_patterns)
-
-OutcomeProbs.Table.AwareARTVL &lt;- as.data.frame( cbind( Class = c(&quot;Class 1 - Aware, not on ART&quot;, &quot;Class 2 - Aware, on ART&quot;, &quot;Class 3 - Unaware&quot;), outcomep)) %&gt;%
-  mutate(across(-Class, as.numeric))</code></pre>
 </div>
 <div id="arvstatus" class="section level3">
 <h3>arvstatus</h3>
-<pre class="r"><code>modelvars_arv &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;arvstatus&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_arv &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars_arv) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-awareART.lca3 &lt;- randomLCA(aware_patterns_arv, nclass = 3, quadpoints = 30)
-
-outcomep &lt;- round(awareART.lca3$outcomep, 4)
-colnames(outcomep) &lt;- names(aware_patterns_arv)
-
-OutcomeProbs.Table.AwareART &lt;- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep)) %&gt;%
-  mutate(across(-Class, as.numeric))</code></pre>
 </div>
 </div>
 <div id="extract-classes" class="section level2">
 <h2>extract classes</h2>
-<pre class="r"><code>set.seed(719)
-lca_out_full = postClassProbs(awareARTVL.lca3) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3, 1,
-                                 if_else(class_3 &gt; class_1, 3, 1)), 
-                         if_else(class_2 &gt; class_3, 2, 3)),
-         vlsaware = if_else(class == 1, 1, 0), # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;
-         awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, &quot;1&quot; is NEITHER unaware NOR aware and not on art - in terms of  class, a &quot;1&quot; means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unaware</code></pre>
-<pre class="r"><code>set.seed(719)
-lca_out_full_arv = postClassProbs(awareART.lca3) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3, 1,
-                                 if_else(class_3 &gt; class_1, 3, 1)), 
-                         if_else(class_2 &gt; class_3, 2, 3)),
-         vlsaware = if_else(class == 1, 1, 0), # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;
-         awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, &quot;1&quot; is NEITHER unaware NOR aware and not on art - in terms of  class, a &quot;1&quot; means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unaware</code></pre>
-<pre class="r"><code>full_dat_out = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_full, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;vlunder200&quot;))</code></pre>
-<pre class="r"><code>full_dat_out_arv = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_full_arv, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;arvstatus&quot;))</code></pre>
-<pre class="r"><code>class_out = full_join(full_dat_out, full_dat_out_arv, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;arvstatus&quot;, &quot;vlunder200&quot;, &quot;awareartselfreported.y&quot;))
-# nrow(class_out) # 3,507
-# nrow(full_dat_out) #3,507
-# nrow(full_dat_out_arv) # 3,507</code></pre>
 </div>
 <div id="further-tests-simple-model-simpler-model" class="section level1">
 <h1>further tests, simple model, simpler model</h1>
 <div id="no-lab-data" class="section level2">
 <h2>no lab data</h2>
-<pre class="r"><code>modelvars_simple &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_simple &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars_simple) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-aware.lca_simple &lt;- randomLCA(aware_patterns_simple, nclass = 3, quadpoints = 30)
-
-outcomep &lt;- round(aware.lca_simple$outcomep, 4)
-colnames(outcomep) &lt;- names(aware_patterns_simple)
-
-OutcomeProbs.Table.Aware &lt;- as.data.frame( cbind( Class = c(&quot;Class 1 - Aware, not on ART&quot;, &quot;Class 2 - Aware, on ART&quot;, &quot;Class 3 - Unaware&quot;), outcomep)) %&gt;%
-  mutate(across(-Class, as.numeric))</code></pre>
+<p>Remove the lab data variable (vlunder200 and arvstatus)</p>
 </div>
 <div id="extract-classes-1" class="section level2">
 <h2>extract classes</h2>
-<pre class="r"><code>set.seed(719)
-lca_out_simple = postClassProbs(aware.lca_simple) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3, 1,
-                                 if_else(class_3 &gt; class_1, 3, 1)), 
-                         if_else(class_2 &gt; class_3, 2, 3)),
-         vlsaware = if_else(class == 1, 1, 0), # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;
-         awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, &quot;1&quot; is NEITHER unaware NOR aware and not on art - in terms of  class, a &quot;1&quot; means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
-         unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unaware</code></pre>
 </div>
 <div id="append-classes-to-dataframe" class="section level2">
 <h2>append classes to dataframe</h2>
-<pre class="r"><code>simple_dat_out = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_simple, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;))</code></pre>
 </div>
-<div id="join-simple-dataframes-with-full-dataframes" class="section level2">
-<h2>join simple dataframes with full dataframes</h2>
-<pre class="r"><code>simple_vls_class_out = full_join(full_dat_out, simple_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;arvstatus&quot;, &quot;awareartselfreported.y&quot;))
-
-simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;awareartselfreported.y&quot;))</code></pre>
+<div id="join-simplified-dataframes-with-full-dataframes" class="section level2">
+<h2>join simplified dataframes with full dataframes</h2>
 </div>
 <div id="check-the-classes" class="section level2">
 <h2>check the classes</h2>
-<pre class="r"><code>gt(OutcomeProbs.Table.AwareARTVL)</code></pre>
-<style>html {
+<p><style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
@@ -850,7 +744,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   
   <thead class="gt_col_headings">
     <tr>
-      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Class</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Class</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">never_tested</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_negative</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_positive</th>
@@ -862,7 +756,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   </thead>
   <tbody class="gt_table_body">
     <tr>
-      <td class="gt_row gt_left">Class 1 - Aware, not on ART</td>
+      <td class="gt_row gt_right">1</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">0.0434</td>
       <td class="gt_row gt_right">0.9996</td>
@@ -872,7 +766,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
       <td class="gt_row gt_right">0.8480</td>
     </tr>
     <tr>
-      <td class="gt_row gt_left">Class 2 - Aware, on ART</td>
+      <td class="gt_row gt_right">2</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">0.0660</td>
       <td class="gt_row gt_right">1.0000</td>
@@ -882,7 +776,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
       <td class="gt_row gt_right">0.0691</td>
     </tr>
     <tr>
-      <td class="gt_row gt_left">Class 3 - Unaware</td>
+      <td class="gt_row gt_right">3</td>
       <td class="gt_row gt_right">0.3226</td>
       <td class="gt_row gt_right">0.6071</td>
       <td class="gt_row gt_right">0.0000</td>
@@ -894,9 +788,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   </tbody>
   
   
-</table></div>
-<pre class="r"><code>gt(OutcomeProbs.Table.AwareART)</code></pre>
-<style>html {
+</table></div><style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
@@ -1280,9 +1172,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   </tbody>
   
   
-</table></div>
-<pre class="r"><code>gt(OutcomeProbs.Table.Aware)</code></pre>
-<style>html {
+</table></div><style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
@@ -1622,7 +1512,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   
   <thead class="gt_col_headings">
     <tr>
-      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Class</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Class</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">never_tested</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_negative</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_positive</th>
@@ -1633,7 +1523,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   </thead>
   <tbody class="gt_table_body">
     <tr>
-      <td class="gt_row gt_left">Class 1 - Aware, not on ART</td>
+      <td class="gt_row gt_right">1</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">0.0681</td>
       <td class="gt_row gt_right">1.0000</td>
@@ -1642,7 +1532,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
       <td class="gt_row gt_right">0.6583</td>
     </tr>
     <tr>
-      <td class="gt_row gt_left">Class 2 - Aware, on ART</td>
+      <td class="gt_row gt_right">2</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">0.0435</td>
       <td class="gt_row gt_right">0.9996</td>
@@ -1651,7 +1541,7 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
       <td class="gt_row gt_right">0.9859</td>
     </tr>
     <tr>
-      <td class="gt_row gt_left">Class 3 - Unaware</td>
+      <td class="gt_row gt_right">3</td>
       <td class="gt_row gt_right">0.3226</td>
       <td class="gt_row gt_right">0.6071</td>
       <td class="gt_row gt_right">0.0000</td>
@@ -1662,14 +1552,22 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
   </tbody>
   
   
-</table></div>
-<pre class="r"><code>xtabs(~class.x + class.y, data = simple_vls_class_out)</code></pre>
+</table></div></p>
+</div>
+</div>
+<div id="compare-different-models" class="section level1">
+<h1>compare different models</h1>
+<p>Cross tabulate to compare different models</p>
+<div id="vlunder200-model-vs.-no-lab-data-model" class="section level3">
+<h3>vlunder200 model vs. no lab data model</h3>
 <pre><code>##        class.y
 ## class.x    1    2    3
 ##       1    0 2349    0
 ##       2  280   38    0
 ##       3    0    0  840</code></pre>
-<pre class="r"><code>xtabs(~class.x + class.y, data = simple_arv_class_out)</code></pre>
+</div>
+<div id="arvstatus-model-vs.-no-lab-data" class="section level3">
+<h3>arvstatus model vs. no lab data</h3>
 <pre><code>##        class.y
 ## class.x    1    2    3
 ##       1    0 2339    0
@@ -1678,19 +1576,19 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
 </div>
 <div id="awareartselfreported" class="section level2">
 <h2>awareartselfreported</h2>
-<pre class="r"><code>xtabs(~awareartselfreported.y + class, data = simple_dat_out, exclude = &quot;99&quot;)</code></pre>
+<p>simplified model</p>
 <pre><code>##                       class
 ## awareartselfreported.y    1    2    3
 ##                      1    0    0  838
 ##                      2  278   38    0
 ##                      3    1 2348    0</code></pre>
-<pre class="r"><code>xtabs(~awareartselfreported.y + class, data = full_dat_out, exclude = &quot;99&quot;)</code></pre>
+<p>vlunder200 model</p>
 <pre><code>##                       class
 ## awareartselfreported.y    1    2    3
 ##                      1    0    0  838
 ##                      2    0  316    0
 ##                      3 2348    1    0</code></pre>
-<pre class="r"><code>xtabs(~awareartselfreported.y + class, data = full_dat_out_arv, exclude = &quot;99&quot;)</code></pre>
+<p>arvstatus model</p>
 <pre><code>##                       class
 ## awareartselfreported.y    1    2    3
 ##                      1    0    0  828
@@ -1699,18 +1597,9 @@ simple_arv_class_out = full_join(full_dat_out_arv, simple_dat_out, by = c(&quot;
 </div>
 <div id="compare-models-to-tri90-variables" class="section level2">
 <h2>compare models to tri90 variables</h2>
-<div id="tri90aware-vs.-lca-model-using-arvstatus" class="section level3">
-<h3>tri90aware vs. LCA model using arvstatus</h3>
-<pre class="r"><code>conmat_aware_df_arv = full_dat_out_arv
-
-# 1 - aware on art
-# 2 - aware not on art
-# 3 - unaware
-
-conmat_aware_df_arv$class = factor(conmat_aware_df_arv$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;aware&quot;, &quot;aware&quot;, &quot;unaware&quot;))
-conmat_aware_df_arv$tri90aware = factor(conmat_aware_df_arv$tri90aware, c(&quot;aware&quot; = 1, &quot;unaware&quot; = 0), labels = c(&quot;aware&quot;, &quot;unaware&quot;))
-cMat = caret::confusionMatrix(conmat_aware_df_arv$class, conmat_aware_df_arv$tri90aware, positive = &quot;aware&quot;)
-cMat</code></pre>
+<div id="tri90aware" class="section level3">
+<h3>tri90aware</h3>
+<p>arvstatus model</p>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
@@ -1738,14 +1627,7 @@ cMat</code></pre>
 ##                                         
 ##        &#39;Positive&#39; Class : aware         
 ## </code></pre>
-<pre class="r"><code>conmat_aware_df = full_dat_out
-
-# unique(full_dat_out$arvstatus)
-
-conmat_aware_df$class = factor(conmat_aware_df$class, levels = c(&quot;aware - not on art&quot; = 1, &quot;aware - on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;aware&quot;, &quot;aware&quot;, &quot;unaware&quot;))
-conmat_aware_df$tri90aware = factor(conmat_aware_df$tri90aware, c(&quot;aware&quot; = 1, &quot;unaware&quot; = 0), labels = c(&quot;aware&quot;, &quot;unaware&quot;))
-cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$tri90aware, positive = &quot;aware&quot;)
-cMat</code></pre>
+<p>vlunder200 model</p>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
@@ -1773,12 +1655,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
-<pre class="r"><code>simple_conmat_df = simple_dat_out
-
-simple_conmat_df$class = factor(simple_conmat_df$class, levels = c(&quot;aware - not on art&quot; = 1, &quot;aware - on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;aware&quot;, &quot;aware&quot;, &quot;unaware&quot;))
-simple_conmat_df$tri90aware = factor(simple_conmat_df$tri90aware, c(&quot;aware&quot; = 1, &quot;unaware&quot; = 0), labels = c(&quot;aware&quot;, &quot;unaware&quot;))
-cMat = caret::confusionMatrix(simple_conmat_df$class, simple_conmat_df$tri90aware, positive = &quot;aware&quot;)
-cMat</code></pre>
+<p>no lab data model</p>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
@@ -1810,14 +1687,7 @@ cMat</code></pre>
 </div>
 <div id="tri90art" class="section level2">
 <h2>tri90art</h2>
-<pre class="r"><code>conmat_aware_df_arv = full_dat_out_arv
-
-# unique(full_dat_out_arv$arvstatus)
-
-conmat_aware_df_arv$class = factor(conmat_aware_df_arv$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;on art&quot;, &quot;not on art&quot;, &quot;not on art&quot;))
-conmat_aware_df_arv$tri90art = factor(conmat_aware_df_arv$tri90art, c(&quot;on art&quot; = 1, &quot;not on art&quot; = 0), labels = c(&quot;on art&quot;, &quot;not on art&quot;))
-cMat = caret::confusionMatrix(conmat_aware_df_arv$class, conmat_aware_df_arv$tri90art, positive = &quot;on art&quot;)
-cMat</code></pre>
+<p>arvstatus model</p>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##             Reference
@@ -1845,14 +1715,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : on art          
 ## </code></pre>
-<pre class="r"><code>conmat_aware_df = full_dat_out
-
-# unique(full_dat_out$arvstatus)
-
-conmat_aware_df$class = factor(conmat_aware_df$class, levels = c(&quot;aware - on art&quot; = 1, &quot;aware - not on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;on art&quot;, &quot;not on art&quot;, &quot;not on art&quot;))
-conmat_aware_df$tri90art = factor(conmat_aware_df$tri90art, c(&quot;on art&quot; = 1, &quot;not on art&quot; = 0), labels = c(&quot;on art&quot;, &quot;not on art&quot;))
-cMat = caret::confusionMatrix(conmat_aware_df$class, conmat_aware_df$tri90art, positive = &quot;on art&quot;)
-cMat</code></pre>
+<p>vlunder200 model</p>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##             Reference
@@ -1880,12 +1743,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : on art          
 ## </code></pre>
-<pre class="r"><code>simple_conmat_df = simple_dat_out
-
-simple_conmat_df$class = factor(simple_conmat_df$class, levels = c(&quot;aware - not on art&quot; = 1, &quot;aware - on art&quot; = 2, &quot;unaware&quot; = 3), labels = c(&quot;not on art&quot;, &quot;on art&quot;, &quot;not on art&quot;))
-simple_conmat_df$tri90art = factor(simple_conmat_df$tri90art, c(&quot;on art&quot; = 1, &quot;not on art&quot; = 0), labels = c(&quot;on art&quot;, &quot;not on art&quot;))
-cMat = caret::confusionMatrix(simple_conmat_df$class, simple_conmat_df$tri90art, positive = &quot;on art&quot;)
-cMat</code></pre>
+<p>no lab data model</p>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##             Reference
@@ -1917,60 +1775,22 @@ cMat</code></pre>
 </div>
 <div id="simpler-model" class="section level1">
 <h1>simpler model</h1>
+<p>Remove “arvstakenev” and “oth_art_care” variables.</p>
 <div id="lca-simpler" class="section level2">
 <h2>LCA, simpler</h2>
 <div id="vlunder200-1" class="section level3">
 <h3>vlunder200</h3>
-<pre class="r"><code>modelvars_simpler_vl &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;vlunder200&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_simpler_vl &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars_simpler_vl) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-aware.lca_simpler_vl &lt;- randomLCA(aware_patterns_simpler_vl, nclass = 3, quadpoints = 30)
-
-outcomep &lt;- round(aware.lca_simpler_vl$outcomep, 4)
-colnames(outcomep) &lt;- names(aware_patterns_simpler_vl)
-
-OutcomeProbs.Table.Aware_simpler_vl &lt;- as.data.frame( cbind( Class = c(&quot;Class 1 - Aware, not on ART&quot;, &quot;Class 2 - Aware, on ART&quot;, &quot;Class 3 - Unaware&quot;), outcomep)) %&gt;%
-  mutate(across(-Class, as.numeric))</code></pre>
 </div>
-<div id="arvstatus-1" class="section level3">
-<h3>arvstatus</h3>
-<pre class="r"><code>modelvars_simpler_arv &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;arvstatus&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_simpler_arv &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars_simpler_arv) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-aware.lca_simpler_arv &lt;- randomLCA(aware_patterns_simpler_arv, nclass = 4, quadpoints = 30)
-
-outcomep_simpler_arv &lt;- round(aware.lca_simpler_arv$outcomep, 4)
-colnames(outcomep_simpler_arv) &lt;- names(aware_patterns_simpler_arv)
-
-OutcomeProbs.Table.Aware_simpler_arv &lt;- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_simpler_arv)) %&gt;%
-  mutate(across(-Class, as.numeric))</code></pre>
+<div id="arvstatus-4-classes" class="section level3">
+<h3>arvstatus (4 classes)</h3>
 </div>
 </div>
 <div id="extract-classes-2" class="section level2">
 <h2>extract classes</h2>
-<pre class="r"><code>set.seed(719)
-lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3, 1,
-                                 if_else(class_3 &gt; class_1, 3, 1)), 
-                         if_else(class_2 &gt; class_3, 2, 3)))
-         # vlsaware = if_else(class == 1, 1, 0), # coded &quot;forwards&quot; meaning 1 is aware on art, 0 is EITHER unaware OR &quot;aware and not on art&quot;
-         # awarenotart = if_else(class == 2, 0, 1), # coded &quot;backwards&quot; meaning 0 is &quot;aware not on art&quot;, 1 is not &quot;aware not on art&quot;, or in other words, &quot;1&quot; is NEITHER unaware NOR aware and not on art - in terms of  class, a &quot;1&quot; means that an individual may be EITHER &quot;aware AND on art&quot; OR unaware
-         # unaware = if_else(class == 3, 0, 1)) # coded &quot;backwards&quot; meaning 0 is unaware, 1 is not unaware</code></pre>
-<div id="what-are-the-classes-in-the-simpler-vl-model" class="section level3">
-<h3>What are the classes in the simpler vl model?</h3>
+<div id="what-are-the-classes-in-the-vlunder200-model-with-fewer-variables" class="section level3">
+<h3>What are the classes in the vlunder200 model with fewer variables?</h3>
 <p>They don’t seem to make much sense. Perhaps the first one is never tested, reported positive, not on arvs. The second one is reported negative, not on arvs, and the third one is reported positive, on arvs.</p>
 <p>Maybe 2 classes would work better…</p>
-<pre class="r"><code>gt(OutcomeProbs.Table.Aware_simpler_vl)</code></pre>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -2311,7 +2131,7 @@ lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %&gt;%
   
   <thead class="gt_col_headings">
     <tr>
-      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1">Class</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">Class</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">never_tested</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_negative</th>
       <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1">reported_positive</th>
@@ -2321,7 +2141,7 @@ lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %&gt;%
   </thead>
   <tbody class="gt_table_body">
     <tr>
-      <td class="gt_row gt_left">Class 1 - Aware, not on ART</td>
+      <td class="gt_row gt_right">1</td>
       <td class="gt_row gt_right">0.4392</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">0.4636</td>
@@ -2329,7 +2149,7 @@ lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %&gt;%
       <td class="gt_row gt_right">0.0810</td>
     </tr>
     <tr>
-      <td class="gt_row gt_left">Class 2 - Aware, on ART</td>
+      <td class="gt_row gt_right">2</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">1.0000</td>
       <td class="gt_row gt_right">0.0386</td>
@@ -2337,7 +2157,7 @@ lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %&gt;%
       <td class="gt_row gt_right">0.1255</td>
     </tr>
     <tr>
-      <td class="gt_row gt_left">Class 3 - Unaware</td>
+      <td class="gt_row gt_right">3</td>
       <td class="gt_row gt_right">0.0000</td>
       <td class="gt_row gt_right">0.0434</td>
       <td class="gt_row gt_right">1.0000</td>
@@ -2350,26 +2170,11 @@ lca_out_simpler_vl = postClassProbs(aware.lca_simpler_vl) %&gt;%
 </table></div>
 </div>
 </div>
-<div id="simpler-model-with-4-classes" class="section level2">
-<h2>simpler model with 4 classes</h2>
+<div id="fewer-variable-model-with-4-classes" class="section level2">
+<h2>fewer variable model with 4 classes</h2>
 <p>It appears 4 classes seems to do the trick…class 1 - never tested, class 2 - reported negative, class 3, aware not on art, class 4, aware on art.</p>
-<div id="vlunder200-2" class="section level3">
-<h3>vlunder200</h3>
-<pre class="r"><code>modelvars_simpler_vl &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;vlunder200&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_simpler_vl &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars_simpler_vl) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-aware.lca_simpler_vl2 &lt;- randomLCA(aware_patterns_simpler_vl, nclass = 4, quadpoints = 30)
-
-outcomep_svl2 &lt;- round(aware.lca_simpler_vl2$outcomep, 4)
-colnames(outcomep_svl2) &lt;- names(aware_patterns_simpler_vl)
-
-OutcomeProbs.Table.Aware_simpler_vl2 &lt;- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_svl2)) %&gt;%
-  mutate(across(-Class, as.numeric))
-gt(OutcomeProbs.Table.Aware_simpler_vl2)</code></pre>
+<div id="vlunder200-5-variable" class="section level3">
+<h3>vlunder200 (5 variable)</h3>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -2759,22 +2564,8 @@ gt(OutcomeProbs.Table.Aware_simpler_vl2)</code></pre>
 </div>
 <div id="worth-a-try-to-add-another-class" class="section level2">
 <h2>worth a try to add another class?</h2>
-<p>classes would apparently be: 1 - aware, not on art; 2 - reported negative; 3 - never tested; 4 - aware on art.</p>
-<pre class="r"><code>modelvars &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;vlunder200&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-awareARTVL.lca4 &lt;- randomLCA(aware_patterns, nclass = 4, quadpoints = 30)
-
-outcomep4 &lt;- round(awareARTVL.lca4$outcomep, 4)
-colnames(outcomep4) &lt;- names(aware_patterns)
-
-OutcomeProbs.Table.AwareARTVL4 &lt;- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep4)) %&gt;%
-  mutate(across(-Class, as.numeric))
-gt(OutcomeProbs.Table.AwareARTVL4)</code></pre>
+<p>Maybe compare the models using 4 classes so they maintain some of the original intended class structure - to compare tri90aware and tri90art variables.</p>
+<p>For the vlunder200 full model classes would apparently be: 1 - aware, not on art; 2 - reported negative; 3 - never tested; 4 - aware on art.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -3172,21 +2963,6 @@ gt(OutcomeProbs.Table.AwareARTVL4)</code></pre>
 </table></div>
 <p>For the arvstatus-model, classes could be viewed as: 1 - never tested; 2 - aware on art; 3 - aware not on art; 4 - reported negative</p>
 <p>This might actually work…?</p>
-<pre class="r"><code>modelvars &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;arvstatus&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_arv4 &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-awareART.lca4 &lt;- randomLCA(aware_patterns_arv4, nclass = 4, quadpoints = 30)
-
-outcomep_arv4 &lt;- round(awareART.lca4$outcomep, 4)
-colnames(outcomep_arv4) &lt;- names(aware_patterns_arv4)
-
-OutcomeProbs.Table.AwareART4 &lt;- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_arv4)) %&gt;%
-  mutate(across(-Class, as.numeric))
-gt(OutcomeProbs.Table.AwareART4)</code></pre>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -3583,22 +3359,7 @@ gt(OutcomeProbs.Table.AwareART4)</code></pre>
   
 </table></div>
 <p>For the simpler model (no lab work), the classes are: 1- aware on art; 2 - reported negative; 3 - aware not on art; and 4 - never tested.</p>
-<p>Okay, so let’s compare them.</p>
-<pre class="r"><code>modelvars_simple &lt;- c( &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;)
-# Remove all rows which have values other than 0 or 1
-aware_patterns_simple4 &lt;- bio_select_mod %&gt;% 
-  select( all_of(modelvars_simple) ) %&gt;%
-  filter( across(everything(), ~ .x %in% c(0,1)))
-# aware_patterns$vlunder200
-set.seed(719)
-aware.lca_simple4 &lt;- randomLCA(aware_patterns_simple, nclass = 4, quadpoints = 30)
-
-outcomep_simple4 &lt;- round(aware.lca_simple4$outcomep, 4)
-colnames(outcomep_simple4) &lt;- names(aware_patterns_simple4)
-
-OutcomeProbs.Table.Aware4 &lt;- as.data.frame( cbind( Class = c(1, 2, 3, 4), outcomep_simple4)) %&gt;%
-  mutate(across(-Class, as.numeric))
-gt(OutcomeProbs.Table.Aware4)</code></pre>
+<p>Okay, so let’s compare them using 4 classes.</p>
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
@@ -3992,116 +3753,21 @@ gt(OutcomeProbs.Table.Aware4)</code></pre>
 </div>
 <div id="extract-classes-from-the-models-with-4-lca-classes" class="section level2">
 <h2>extract classes from the models with 4 LCA classes</h2>
-<pre class="r"><code># simpler_vl2 - 4 variables + lab data
-set.seed(719)
-lca_out_simpler_vl2 = postClassProbs(aware.lca_simpler_vl2) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3,
-                                 if_else(class_3 &gt; class_4, 1,
-                                         if_else(class_4 &gt; class_1, 4, 1)),
-                                 if_else(class_3 &gt; class_1,
-                                         if_else(class_1 &gt; class_4, 3,
-                                                 if_else(class_4 &gt; class_3, 4, 3)),
-                                         if_else(class_1 &gt; class_4, 1, 4))),
-                         if_else(class_2 &gt; class_3, 
-                                 if_else(class_3 &gt; class_4, 2,
-                                         if_else(class_4 &gt; class_2, 4, 2)),
-                                 if_else(class_4 &gt; class_3, 4, 3))))
-
-# simple - 5 SR variables, no lab data
-set.seed(719)
-lca_out_simple4 = postClassProbs(aware.lca_simple4) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3,
-                                 if_else(class_3 &gt; class_4, 1,
-                                         if_else(class_4 &gt; class_1, 4, 1)),
-                                 if_else(class_3 &gt; class_1,
-                                         if_else(class_1 &gt; class_4, 3,
-                                                 if_else(class_4 &gt; class_3, 4, 3)),
-                                         if_else(class_1 &gt; class_4, 1, 4))),
-                         if_else(class_2 &gt; class_3, 
-                                 if_else(class_3 &gt; class_4, 2,
-                                         if_else(class_4 &gt; class_2, 4, 2)),
-                                 if_else(class_4 &gt; class_3, 4, 3))))
-
-# vlunder200 - full model (7 variables), vlunder200
-set.seed(719)
-lca_out_vls4 = postClassProbs(awareARTVL.lca4) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3,
-                                 if_else(class_3 &gt; class_4, 1,
-                                         if_else(class_4 &gt; class_1, 4, 1)),
-                                 if_else(class_3 &gt; class_1,
-                                         if_else(class_1 &gt; class_4, 3,
-                                                 if_else(class_4 &gt; class_3, 4, 3)),
-                                         if_else(class_1 &gt; class_4, 1, 4))),
-                         if_else(class_2 &gt; class_3, 
-                                 if_else(class_3 &gt; class_4, 2,
-                                         if_else(class_4 &gt; class_2, 4, 2)),
-                                 if_else(class_4 &gt; class_3, 4, 3))))
-
-# arvstatus - full model (7 variables), arvstatus
-set.seed(719)
-lca_out_art4 = postClassProbs(awareART.lca4) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3,
-                                 if_else(class_3 &gt; class_4, 1,
-                                         if_else(class_4 &gt; class_1, 4, 1)),
-                                 if_else(class_3 &gt; class_1,
-                                         if_else(class_1 &gt; class_4, 3,
-                                                 if_else(class_4 &gt; class_3, 4, 3)),
-                                         if_else(class_1 &gt; class_4, 1, 4))),
-                         if_else(class_2 &gt; class_3, 
-                                 if_else(class_3 &gt; class_4, 2,
-                                         if_else(class_4 &gt; class_2, 4, 2)),
-                                 if_else(class_4 &gt; class_3, 4, 3))))
-
-# simpler model (5 variables), arvstatus
-set.seed(719)
-lca_out_simpler_arv = postClassProbs(aware.lca_simpler_arv) %&gt;% 
-  janitor::clean_names() %&gt;% 
-  mutate(class = if_else(class_1 &gt; class_2, 
-                         if_else(class_2 &gt; class_3,
-                                 if_else(class_3 &gt; class_4, 1,
-                                         if_else(class_4 &gt; class_1, 4, 1)),
-                                 if_else(class_3 &gt; class_1,
-                                         if_else(class_1 &gt; class_4, 3,
-                                                 if_else(class_4 &gt; class_3, 4, 3)),
-                                         if_else(class_1 &gt; class_4, 1, 4))),
-                         if_else(class_2 &gt; class_3, 
-                                 if_else(class_3 &gt; class_4, 2,
-                                         if_else(class_4 &gt; class_2, 4, 2)),
-                                 if_else(class_4 &gt; class_3, 4, 3))))</code></pre>
 </div>
-<div id="compare-to-simple-vlunder200-arvstatus-models" class="section level2">
-<h2>compare to simple, vlunder200, arvstatus-models</h2>
-<pre class="r"><code>simpler_vl2_dat_out = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_simpler_vl2, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;vlunder200&quot;))</code></pre>
-<pre class="r"><code>full_dat_out4 = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_vls4, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;vlunder200&quot;))</code></pre>
-<pre class="r"><code>full_dat_out_arv4 = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_art4, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;, &quot;arvstatus&quot;))</code></pre>
-<pre class="r"><code>simple_out4 = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_simple4, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvstakenev&quot;, &quot;arvscurrent&quot;, &quot;oth_art_care&quot;))</code></pre>
-<pre class="r"><code>simpler_vl2_vls_class_out = full_join(full_dat_out4, simpler_vl2_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;arvstatus&quot;, &quot;awareartselfreported.y&quot;))
-
-simpler_vl2_arv_class_out = full_join(full_dat_out_arv4, simpler_vl2_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;vlunder200&quot;, &quot;arvscurrent&quot;, &quot;awareartselfreported.y&quot;))
-
-simpler_vl2_simple_class_out = full_join(simple_out4, simpler_vl2_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;vlunder200&quot;, &quot;arvscurrent&quot;, &quot;arvstatus&quot;, &quot;awareartselfreported.y&quot;))
-
-vls_arv_class_out = full_join(full_dat_out4, full_dat_out_arv4, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;vlunder200&quot;, &quot;arvstatus&quot;, &quot;arvscurrent&quot;, &quot;awareartselfreported.y&quot;))</code></pre>
+</div>
+<div id="lca-classes" class="section level1">
+<h1>4 LCA classes</h1>
+<div id="compare-to-no-lab-data--vlunder200--arvstatus-models" class="section level2">
+<h2>compare to no-lab-data-, vlunder200-, arvstatus-models</h2>
+<p>vlunder200 (5 variable)</p>
+<p>vlunder200 (7 variable)</p>
+<p>arvstatus(7 variable)</p>
+<p>no lab data</p>
 </div>
 <div id="cross-tabulation" class="section level2">
 <h2>cross tabulation</h2>
 <p>Let’s check the full datasets first out of curiosity.</p>
+<p>Cross tabulate the 7 variable models now using 4 classes.</p>
 <p>There is similar agreement between classes to the 3 class model.</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = vls_arv_class_out)</code></pre>
 <pre><code>##        class.y
@@ -4111,8 +3777,8 @@ vls_arv_class_out = full_join(full_dat_out4, full_dat_out_arv4, by = c(&quot;per
 ##       3  267    0    0    0
 ##       4    0 2333    0    0</code></pre>
 <p>What about other models? (comparing simplified models - no lab data, or fewer variables)</p>
-<p>There are more disagreements between classes. But, how about against tri90 variables?</p>
-<p>It seems much of the disagreement in classes is in class 3.</p>
+<p>There are more disagreements between classes. But, how does it compare to tri90 variables?</p>
+<p>vlunder200 (5 variable) vs. vlunder200 (7 variable)</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_vl2_vls_class_out)</code></pre>
 <pre><code>##        class.y
 ## class.x    1    2    3    4
@@ -4120,6 +3786,7 @@ vls_arv_class_out = full_join(full_dat_out4, full_dat_out_arv4, by = c(&quot;per
 ##       2    0  569    0    0
 ##       3  271    0    0    0
 ##       4    0    0  357 1992</code></pre>
+<p>vlunder200 (5 variable) vs. arvstatus(7 variable)</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_vl2_arv_class_out)</code></pre>
 <pre><code>##        class.y
 ## class.x    1    2    3    4
@@ -4127,6 +3794,7 @@ vls_arv_class_out = full_join(full_dat_out4, full_dat_out_arv4, by = c(&quot;per
 ##       2    0    1  358 1980
 ##       3    0    0  290   18
 ##       4    0  565    0    0</code></pre>
+<p>vlunder200 (5 variable) vs. no lab data</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_vl2_simple_class_out)</code></pre>
 <pre><code>##        class.y
 ## class.x    1    2    3    4
@@ -5707,8 +5375,12 @@ vls_arv_class_out = full_join(full_dat_out4, full_dat_out_arv4, by = c(&quot;per
   
 </table></div>
 </div>
-<div id="fewer-variables-model-vlunder200" class="section level2">
-<h2>fewer variables model, vlunder200</h2>
+</div>
+<div id="tri90variables" class="section level1">
+<h1>tri90variables</h1>
+<div id="vlunder200-5-variables" class="section level2">
+<h2>vlunder200 (5 variables)</h2>
+<p>tri90aware</p>
 <pre class="r"><code>simpler_vl2_conmat_df = simpler_vl2_dat_out
 
 # 1 - never tested
@@ -5747,6 +5419,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
+<p>tri90art</p>
 <pre class="r"><code>simpler_vl2_conmat_df = simpler_vl2_dat_out
 
 # 1 - never tested
@@ -5788,6 +5461,7 @@ cMat</code></pre>
 </div>
 <div id="no-lab-data-model" class="section level2">
 <h2>no lab data model</h2>
+<p>tri90art</p>
 <pre class="r"><code>simple_out4_conmat_df = simple_out4
 
 # 1 - aware on art
@@ -5826,6 +5500,7 @@ cMat</code></pre>
 ##                                          
 ##        &#39;Positive&#39; Class : on art         
 ## </code></pre>
+<p>tri90aware</p>
 <pre class="r"><code>simple_out4_conmat_df = simple_out4
 
 # 1 - aware on art
@@ -5865,8 +5540,9 @@ cMat</code></pre>
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
 </div>
-<div id="vlunder200-full-model" class="section level2">
-<h2>vlunder200 full model</h2>
+<div id="vlunder200-full-model-7-variables" class="section level2">
+<h2>vlunder200 full model (7 variables)</h2>
+<p>tri90aware</p>
 <pre class="r"><code>full_dat_out4_conmat_df = full_dat_out4
 
 # 1 - aware not on art
@@ -5905,6 +5581,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
+<p>tri90art</p>
 <pre class="r"><code>full_dat_out4_conmat_df = full_dat_out4
 
 # 1 - aware not on art
@@ -5944,8 +5621,9 @@ cMat</code></pre>
 ##        &#39;Positive&#39; Class : on art          
 ## </code></pre>
 </div>
-<div id="arvstatus-model" class="section level2">
-<h2>arvstatus model</h2>
+<div id="arvstatus-model-7-variables" class="section level2">
+<h2>arvstatus model (7 variables)</h2>
+<p>tri90aware</p>
 <pre class="r"><code>full_dat_arv4_conmat_df = full_dat_out_arv4
 
 # 1 - never tested
@@ -5984,6 +5662,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
+<p>tri90art</p>
 <pre class="r"><code>full_dat_arv4_conmat_df = full_dat_out_arv4
 
 # 1 - never tested
@@ -6023,21 +5702,12 @@ cMat</code></pre>
 ##        &#39;Positive&#39; Class : on art          
 ## </code></pre>
 </div>
-<div id="now-with-the-simpler-arvstatus-model" class="section level2">
-<h2>now with the simpler arvstatus model</h2>
-<pre class="r"><code>simpler_arv_dat_out = bio_select_mod %&gt;% 
-  left_join(bio_select_var, by = &quot;personid&quot;) %&gt;% 
-  left_join(lca_out_simpler_arv, copy = TRUE, by = c(&quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;arvstatus&quot;))</code></pre>
-<pre class="r"><code>simpler_arv_full_class_out = full_join(full_dat_out4, simpler_arv_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;arvscurrent&quot;, &quot;arvstatus&quot;, &quot;awareartselfreported.y&quot;))
-
-simpler_arv_arv_class_out = full_join(full_dat_out_arv4, simpler_arv_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;vlunder200&quot;, &quot;arvscurrent&quot;, &quot;awareartselfreported.y&quot;))
-
-simpler_arv_simple_class_out = full_join(simple_out4, simpler_arv_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;vlunder200&quot;, &quot;arvscurrent&quot;, &quot;arvstatus&quot;, &quot;awareartselfreported.y&quot;))
-
-simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, by = c(&quot;personid&quot;, &quot;never_tested&quot;, &quot;reported_negative&quot;, &quot;reported_positive&quot;, &quot;vlunder200&quot;, &quot;arvstatus&quot;, &quot;arvscurrent&quot;, &quot;awareartselfreported.y&quot;))</code></pre>
 </div>
-<div id="simple-models-compared-to-each-other" class="section level2">
-<h2>simple models compared to each other</h2>
+<div id="build-the-arvstatus-model-5-variables" class="section level1">
+<h1>build the arvstatus model (5 variables)</h1>
+<div id="compare-the-5-variable-models" class="section level2">
+<h2>Compare the 5-variable models</h2>
+<p>vlunder200 (5 variables) vs. arvstatus (5 variables)</p>
 <p>Some disagreement. How about the other models?</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_vls_arv_class_out)</code></pre>
 <pre><code>##        class.y
@@ -6046,7 +5716,7 @@ simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, 
 ##       2    0    0  566    0
 ##       3  268    0    0  380
 ##       4 1923    0    0   75</code></pre>
-<p>Disagreement in class 4, sometimes class 3.</p>
+<p>arvstatus (5 variable) vs. vlunder (7 variable)</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_arv_full_class_out)</code></pre>
 <pre><code>##        class.y
 ## class.x    1    2    3    4
@@ -6054,6 +5724,7 @@ simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, 
 ##       2    0    0  563    0
 ##       3    0  267    0    0
 ##       4 2191    0    0  142</code></pre>
+<p>arvstatus (5 variable) vs. arvstatus (7 variable)</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_arv_arv_class_out)</code></pre>
 <pre><code>##        class.y
 ## class.x    1    2    3    4
@@ -6061,6 +5732,7 @@ simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, 
 ##       2 2191    0    1  147
 ##       3    0    0    0  308
 ##       4    0    0  565    0</code></pre>
+<p>arvstatus (5 variable) vs. no lab data</p>
 <pre class="r"><code>xtabs(~class.x + class.y, data = simpler_arv_simple_class_out)</code></pre>
 <pre><code>##        class.y
 ## class.x    1    2    3    4
@@ -6069,12 +5741,9 @@ simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, 
 ##       3    0    0    2  276
 ##       4    0  267   59    0</code></pre>
 </div>
-<div id="compare-to-tri90-variables" class="section level2">
-<h2>compare to tri90 variables</h2>
-<div id="tri90aware" class="section level3">
-<h3>tri90aware</h3>
-<div id="cross-tabulation-1" class="section level4">
-<h4>cross-tabulation</h4>
+</div>
+<div id="arvstatus-5-variable" class="section level1">
+<h1>arvstatus (5 variable)</h1>
 <p>reminder of classes</p>
 <pre class="r"><code>gt(OutcomeProbs.Table.Aware_simpler_arv)</code></pre>
 <style>html {
@@ -6462,6 +6131,13 @@ simpler_vls_arv_class_out = full_join(simpler_vl2_dat_out, simpler_arv_dat_out, 
   
   
 </table></div>
+<div id="compare-to-tri90-variables" class="section level2">
+<h2>compare to tri90 variables</h2>
+<div id="tri90aware-1" class="section level3">
+<h3>tri90aware</h3>
+<div id="cross-tabulation-1" class="section level4">
+<h4>cross-tabulation</h4>
+<p>tri90art</p>
 <pre class="r"><code>simpler_arv_conmat_df = simpler_arv_dat_out
 
 # 1 - aware on art
@@ -6500,6 +6176,7 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : on art          
 ## </code></pre>
+<p>tri90aware</p>
 <pre class="r"><code>simpler_arv_conmat_df = simpler_arv_dat_out
 
 # 1 - aware on art
@@ -6538,21 +6215,14 @@ cMat</code></pre>
 ##                                           
 ##        &#39;Positive&#39; Class : aware           
 ## </code></pre>
-<p>NOTE: For some reason the vlunder200 full model performs slightly better than the arvstatus full model in the tri90art variable.</p>
-<p>However, in a simpler model, the arvstatus simpler model performs better than the vlunder200 simpler model.</p>
-<p>The major improvement is from the simpler model to the full model in the tri90art accuracy.</p>
+<p>NOTE: In a 5 variable model, the arvstatus model performs better than the vlunder200 model. However, when 2 more variables are added (“oth_art_care” and “arvstakenev”) the difference is smaller.</p>
+<p>The major improvement is from the 5 variable model to the 7 variable model in the tri90art accuracy.</p>
 </div>
 </div>
 </div>
 </div>
 <div id="check-bic" class="section level1">
 <h1>check BIC</h1>
-<pre class="r"><code>tibble(&quot;3_classes&quot; = 
-         list(BIC(aware.lca_simple),BIC(awareARTVL.lca3),BIC(awareART.lca3),BIC(aware.lca_simpler_vl),NA),
-       &quot;variable_3&quot; = list(&quot;lca_nolabdat&quot;,&quot;lca_vlunder200&quot;,&quot;lca_arvstatus&quot;,&quot;lca_simple_vlunder200&quot;,&quot;5&quot;),
-       &quot;4_classes&quot; = list(BIC(aware.lca_simpler_vl2),BIC(aware.lca_simpler_arv),BIC(aware.lca_simple4),BIC(awareARTVL.lca4),BIC(awareART.lca4)),
-       &quot;variable_4&quot; = list(&quot;lca_simple_vlunder200&quot;, &quot;lca_simple_arvstatus&quot;,&quot;lca_nolabdat&quot;,&quot;lca_vlunder200&quot;,&quot;lca_arvstatus&quot;)) %&gt;% 
-  unnest()</code></pre>
 <pre><code>## # A tibble: 5 x 4
 ##   `3_classes` variable_3            `4_classes` variable_4           
 ##         &lt;dbl&gt; &lt;chr&gt;                       &lt;dbl&gt; &lt;chr&gt;                
