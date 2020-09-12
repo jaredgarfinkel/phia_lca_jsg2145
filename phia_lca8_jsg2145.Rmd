@@ -918,13 +918,13 @@ cMat = caret::confusionMatrix(simpler_arv_conmat_df$class, simpler_arv_conmat_df
 cMat
 ```
 
-NOTE: In a 5 variable model, the arvstatus model performs better than the vlunder200 model. However, when 2 more variables are added ("oth_art_care" and "arvstakenev") the difference is smaller.
+NOTE: The 5 variables models appear to not classify respondents as well possibly because there are two classes of aware individuals with high rates of arvstatus.
 
-The major improvement is from the 5 variable model to the 7 variable model in the tri90art accuracy.
+In Eswatini, it appears a 7 variable model works better.
 
 # check BIC
 
-```{r}
+```{r, results = "hide", echo = FALSE}
 tibble("3_classes" = 
          list(BIC(aware.lca_simple),BIC(awareARTVL.lca3),BIC(awareART.lca3),BIC(aware.lca_simpler_vl),NA),
        "variable_3" = list("lca_nolabdat","lca_vlunder200","lca_arvstatus","lca_simple_vlunder200","5"),
