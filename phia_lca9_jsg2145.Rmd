@@ -30,12 +30,12 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
 ```{r}
-bio <- read_sas("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\camphia2017adultbio_20200109.sas7bdat") %>% 
+bio <- read_sas("C:\\Users\\jared\\OneDrive\\Mailman\\PHIA ICAP-GreenNewDeal2021\\camphia2017adultbio_20200109.sas7bdat") %>% 
   janitor::clean_names() %>% 
   mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt, -resultvlc), ~as.numeric(.x)))
 
 
-ind <- read_sas("C:\\Users\\jared\\OneDrive\\Mailman\\Summer 2020\\PHIA ICAP\\camphia2017adultind_20200109.sas7bdat") %>% 
+ind <- read_sas("C:\\Users\\jared\\OneDrive\\Mailman\\PHIA ICAP-GreenNewDeal2021\\camphia2017adultind_20200109.sas7bdat") %>% 
   janitor::clean_names() %>% 
   mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt), ~as.numeric(.x)))
 ```
@@ -1044,7 +1044,8 @@ postClassProbs(awareARTVL.lca4) %>%
   tab_spanner(label = "cases",
               columns = vars(freq)) %>% 
   tab_spanner(label = "LCA Class",
-              columns = vars(class))
+              columns = vars(class)) %>% 
+  gtsave(filename = "class_profiles_cameroon.html")
 
 postClassProbs(awareARTVL.lca4) %>% 
   janitor::clean_names() %>% 

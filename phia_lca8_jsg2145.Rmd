@@ -1064,7 +1064,8 @@ postClassProbs(awareARTVL.lca4) %>%
   tab_spanner(label = "cases",
               columns = vars(freq)) %>% 
   tab_spanner(label = "LCA Class",
-              columns = vars(class))
+              columns = vars(class)) %>% 
+  gtsave("20201130-class_profiles_lesotho.html")
 
 postClassProbs(awareARTVL.lca4) %>% 
   janitor::clean_names() %>% 
