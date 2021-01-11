@@ -183,7 +183,7 @@ postClassProbs(awareARTVL.lca4) %>%
               columns = vars(freq)) %>% 
   tab_spanner(label = "LCA Class",
               columns = vars(class)) %>% 
-  gtsave("20201130-class_profiles_lesotho.html")
+  gtsave("20210111-4_class_profiles_lesotho.html")
 
 postClassProbs(awareARTVL.lca4) %>%
   janitor::clean_names() %>%
@@ -263,7 +263,7 @@ postClassProbs(awareARTVL.lca3) %>%
               columns = vars(freq)) %>% 
   tab_spanner(label = "LCA Class",
               columns = vars(class)) %>% 
-  gtsave("20201130-class_profiles_lesotho.html")
+  gtsave("20210111-3_class_profiles_lesotho.html")
 ```
 
 The model above is difficult to interpret, because the 2nd class includes those who were never tested and those who reported a positive result.
