@@ -111,7 +111,7 @@ bio_select_var = bio %>%
   select(personid, awareartselfreported)
 ```
 
-# make the LCA model, 
+# make the LCA model, 4 classes
 
 ```{r}
 modelvars <- c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200")
@@ -185,6 +185,90 @@ postClassProbs(awareARTVL.lca4) %>%
               columns = vars(class)) %>% 
   gtsave("20201130-class_profiles_lesotho.html")
 
+postClassProbs(awareARTVL.lca4) %>%
+  janitor::clean_names() %>%
+  mutate(class = if_else(class_1 > class_2,
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 1,
+                                         if_else(class_4 > class_1, 4, 1)),
+                                 if_else(class_3 > class_1,
+                                         if_else(class_1 > class_4, 3,
+                                                 if_else(class_4 > class_3, 4, 3)),
+                                         if_else(class_1 > class_4, 1, 4))),
+                         if_else(class_2 > class_3,
+                                 if_else(class_3 > class_4, 2,
+                                         if_else(class_4 > class_2, 4, 2)),
+                                 if_else(class_4 > class_3, 4, 3)))) %>%
+  select(never_tested:freq, class) %>%
+  mutate(class = if_else(class %in% c(2, 4), "aware", "unaware")) %>%
+  group_by(class, vlunder200) %>%
+  summarize(freq = sum(freq)) %>%
+  group_by(class) %>%
+  mutate(p_vls = freq/sum(freq))
+```
+
+# LCA model, 3 classes
+
+```{r}
+modelvars <- c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+# aware_patterns$vlunder200
+set.seed(719)
+awareARTVL.lca3 <- randomLCA(aware_patterns, nclass = 3, quadpoints = 30)
+
+outcomep <- round(awareARTVL.lca3$outcomep, 4)
+colnames(outcomep) <- names(aware_patterns)
+
+# OutcomeProbs.Table.AwareARTVL <- as.data.frame( cbind( Class = c(1, 2, 3), outcomep)) %>%
+#   mutate(across(-Class, as.numeric))
+```
+
+
+
+```{r}
+set.seed(719)
+lca_out_vls3 = postClassProbs(awareARTVL.lca3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3)))
+```
+
+
+```{r, fig.height = 10, fig.width = 14}
+postClassProbs(awareARTVL.lca3) %>% 
+  janitor::clean_names() %>% 
+  mutate(class = if_else(class_1 > class_2, 
+                         if_else(class_2 > class_3, 1,
+                                 if_else(class_3 > class_1, 3, 1)), 
+                         if_else(class_2 > class_3, 2, 3))) %>% 
+  select(never_tested:freq, class) %>% 
+  arrange(class, vlunder200) %>% 
+  gt() %>% 
+  tab_row_group(group = "class_1",
+                rows = c(1:9)) %>% 
+  tab_row_group(group = "class_2",
+                rows = c(10:12)) %>% 
+  tab_row_group(group = "class_3",
+                rows = c(13:20)) %>% 
+  # tab_row_group(group = "class_4",
+  #               rows = c(17:20)) %>% 
+  tab_spanner(label = "profile",
+              columns = vars(never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, vlunder200)) %>% 
+  tab_spanner(label = "cases",
+              columns = vars(freq)) %>% 
+  tab_spanner(label = "LCA Class",
+              columns = vars(class)) %>% 
+  gtsave("20201130-class_profiles_lesotho.html")
+```
+
+The model above is difficult to interpret, because the 2nd class includes those who were never tested and those who reported a positive result.
+
+```{r, include = FALSE, eval = FALSE, fig.height = 10, fig.width = 14}
 postClassProbs(awareARTVL.lca4) %>%
   janitor::clean_names() %>%
   mutate(class = if_else(class_1 > class_2,
