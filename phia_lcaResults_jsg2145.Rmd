@@ -12,7 +12,7 @@ library(randomLCA)
 library(gt)
 library(caret)
 knitr::opts_chunk$set(
-	echo = FALSE,
+	echo = TRUE,
 	warning = FALSE,
 	message = FALSE,
 	# cache = TRUE,
@@ -64,8 +64,7 @@ bio_select <- bio %>%
   # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
     select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
     filter(bt_status == 1,
-           hivstatusfinal == 1,
-           arvstatus == 1) %>% 
+           hivstatusfinal == 1) %>% 
     select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
     mutate( resultvlc = recode(resultvlc, 
                     "< LLOD" = "1",
@@ -77,6 +76,26 @@ bio_select <- bio %>%
             resultvlc = as.numeric(resultvlc),
             vlunder200 = if_else(resultvlc < 200, 1, 2)) 
 
+# bio_select_notarv <- bio %>% 
+#     left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+#   # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+#     select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+#     filter(bt_status == 1,
+#            hivstatusfinal == 1) %>% 
+#     select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+#     mutate( resultvlc = recode(resultvlc, 
+#                     "< LLOD" = "1",
+#                     "< LLOQ: 20" = "20",
+#                     "< LLOQ: 40" = "40",
+#                     "< LLOQ: 400" = "400",
+#                     "< LLOQ: 839" = "839",
+#                     "> ULOQ 10000000" = "10000000"),
+#             resultvlc = as.numeric(resultvlc),
+#             vlunder200 = if_else(resultvlc < 200, 1, 2))
+```
+
+
+```{r preserve 2 variables}
 bio_select %>% 
   select(vlunder200, everything()) %>% 
   group_by(vlunder200) %>%
@@ -93,6 +112,32 @@ recode_one_zero <- function(x) {
   ))
 }
 
+bio_select_mod1 <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero)) %>% 
+  filter(arvstatus == 1)
+
+bio_select_mod0 <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero)) %>% 
+  filter(arvstatus == 0)
+
 bio_select_mod <- bio_select %>%
     mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
             never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
@@ -104,11 +149,42 @@ bio_select_mod <- bio_select %>%
             arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
             oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
             across(-personid, recode_one_zero))
+```
 
+
+```{r}
 bio_select_var = bio %>% 
   filter(bt_status == 1,
          hivstatusfinal == 1) %>% 
   select(personid, awareartselfreported)
+```
+
+# odds ratios
+
+```{r}
+# xtabs(~reported_positive + arvstatus, data = bio_select_mod1)
+# xtabs(~reported_positive + arvstatus, data = bio_select_mod0)
+xtabs(~reported_positive + arvstatus, data = bio_select_mod, exclude = 99)
+```
+
+OR = `r round(346*2219/374/60, 3)`.
+
+Interpretation: The odds of reporting a positive test given that a respondent is in treatment is 34 times those who were not in treatment in Lesotho.
+
+## other ORs
+
+```{r}
+xtabs(~never_tested + arvstatus, data = bio_select_mod, exclude = 99)
+```
+
+OR = `r round(648*6/72/2273, 3)`.
+
+Interpretation: The odds of reporting having never been tested given that a respondent was in treatment is .024 times those who were not in treatment.
+
+```{r}
+bio_select_mod0 = bio_select_mod %>% 
+  filter(arvstatus == 0)
+xtabs(~never_tested + , data = bio_select_mod0, exclude = 99)
 ```
 
 # make the LCA model, 4 classes
@@ -134,7 +210,7 @@ colnames(outcomep) <- names(aware_patterns)
 
 ```{r}
 set.seed(719)
-lca_out_vls4 = postClassProbs(awareARTVL.lca4) %>% 
+postClassProbs(awareARTVL.lca4) %>% 
   janitor::clean_names() %>% 
   mutate(class = if_else(class_1 > class_2, 
                          if_else(class_2 > class_3,
@@ -182,8 +258,8 @@ postClassProbs(awareARTVL.lca4) %>%
   tab_spanner(label = "cases",
               columns = vars(freq)) %>% 
   tab_spanner(label = "LCA Class",
-              columns = vars(class)) %>% 
-  gtsave("20210111-4_class_profiles_lesotho.html")
+              columns = vars(class))
+  # gtsave("20210111-4_class_profiles_lesotho.html")
 
 postClassProbs(awareARTVL.lca4) %>%
   janitor::clean_names() %>%
@@ -262,8 +338,8 @@ postClassProbs(awareARTVL.lca3) %>%
   tab_spanner(label = "cases",
               columns = vars(freq)) %>% 
   tab_spanner(label = "LCA Class",
-              columns = vars(class)) %>% 
-  gtsave("20210111-3_class_profiles_lesotho.html")
+              columns = vars(class)) 
+  # gtsave("20210111-3_class_profiles_lesotho.html")
 ```
 
 The model above is difficult to interpret, because the 2nd class includes those who were never tested and those who reported a positive result.
