@@ -1,18 +1,15 @@
 ---
-title: "phia_lcaBayes_jsg2145"
+title: "20210204-phia_pca_jsg2145"
 author: "Jared Garfinkel"
-date: "1/21/2021"
+date: "2/4/2021"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
 library(tidyverse)
 library(viridis)
-library(BayesLCA)
-library(gt)
-library(caret)
-library(lavaan)
-library(tidySEM)
+library(psych)
+library(corrplot)
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -118,87 +115,118 @@ aware_patterns <- bio_select_mod %>%
   filter( across(everything(), ~ .x %in% c(0,1)))
 ```
 
-# make an SEM
+# eigenvalue scree plot
 
-```{r DAG, include = FALSE}
-set.seed(719)
-training_dag = dagify(never_tested ~ reported_negative + reported_positive + arvstakenev + arvscurrent + oth_art_care + arvstatus + vlunder200,
-                      reported_negative ~ reported_positive + arvstakenev + arvscurrent + oth_art_care + arvstatus + vlunder200,
-                      reported_positive ~ arvstakenev + arvscurrent + oth_art_care + arvstatus + vlunder200,
-                      arvstakenev ~ arvscurrent + arvstatus + vlunder200,
-                      arvscurrent ~ arvstatus + vlunder200,
-                      labels = c(never_tested = "Never Tested",
-                                 reported_negative = "Received Negative Test",
-                                 reported_positive = "Received Positive Test",
-                                 arvstakenev = "Ever Taken ARVs",
-                                 arvscurrent = "Currently Taking ARVs",
-                                 oth_art_care = "Other ART Care",
-                                 arvstatus = "ARVs Detected in Blood Test",
-                                 vlunder200 = "VL Suppressed"),
-                      exposure = "reported_positive",
-                      outcome = "arvstatus")
+```{r}
+awareparallel = fa.parallel(aware_patterns, cor = "tet", fa = "pc")
+awareparallel$pc.values
+awareparallel$pc.sim
+```
 
-ggdag(training_dag, text = FALSE, use_labels = "label")
+# cronbach's alpha
+
+```{r}
+awarealpha = alpha(aware_patterns)
+awarealpha
+```
+
+This indicates that "never tested" might should be dropped?
+
+# Exploratory Factor Analysis
+
+```{r}
+# ?fa
+
+res = fa(aware_patterns, 2, cor = 'tet', rotate = "geominQ", fm = "wls")
+# res3 = fa(aware_patterns, 3, cor = 'tet', rotate = "geominQ", fm = "wls")
+
+res
+# res3
 ```
 
 ```{r}
-model <- '
-   # latent variables
-     unaware_notest =~ never_tested
-     unaware =~ reported_negative
-     aware_art =~ reported_positive + arvscurrent + arvstatus + vlunder200
-     aware_notart =~ reported_positive + arvstakenev + oth_art_care + arvstatus + vlunder200
-   # regressions
-     # unaware_notest ~ unaware + aware_art + aware_notart
-   # residual covariances
-     # never_tested ~~ reported_negative + reported_positive + arvstakenev + arvscurrent + oth_art_care + arvstatus + vlunder200
-     # reported_negative ~~ arvstakenev + arvscurrent + oth_art_care + arvstatus + vlunder200
-     arvstakenev ~~ reported_positive + arvstatus + vlunder200
-     arvscurrent ~~ arvstakenev + reported_positive + arvstatus + vlunder200
-     oth_art_care ~~ reported_positive
-     arvstatus ~~ reported_positive + vlunder200
-     # vlunder200 ~~ oth_art_care
-'
+fa.diagram(res, digits = 2)
+```
 
-model <- '
-   # latent variables
-     unaware_notest =~ never_tested
-     unaware =~ reported_negative
-     aware_art =~ reported_positive + arvscurrent + arvstatus + vlunder200
-     aware_notart =~ reported_positive + arvstakenev + oth_art_care + arvstatus + vlunder200
-   # residual covariances
-     arvstakenev ~~ reported_positive
-     arvscurrent ~~ arvstakenev + reported_positive + arvstatus + vlunder200
-     oth_art_care ~~ reported_positive
-     arvstatus ~~ reported_positive + vlunder200
-'
-fit <- sem(model, data=aware_patterns)
-lavInspect(fit, "theta")
-summary(fit)
-graph_sem(fit)
+# correlation analysis
+
+```{r}
+M = cor(aware_patterns)
+corrplot(M, type = c("upper"), order = c("hclust"))
+```
+
+## Extract correlation values
+
+```{r}
+output = vector(mode = "list", length = ncol(M))
+rname = NULL
+cname = NULL
+for(i in 1:nrow(M)) {
+  for(j in 1:ncol(M)) {
+    rname[[i]] = dimnames(M)[[c(1, i)]]
+    cname[[j]] = dimnames(M)[[c(2, j)]]
+    output[[c(i, j)]] = tibble_row(i, j, rname[[i]], cname[[j]], M[[i, j]])
+  }
+}
+```
+
+```{r, result = "hide"}
+
+matrify = function(pdata = output) {
+  for(i in 1:46) {
+      result[[i]] = tibble(pdata[[c(i, i)]])
+  }
+  result = bind_rows(result)
+  return(result)
+}
 ```
 
 ```{r}
-set.seed(719)
-test1 <- blca.em(aware_patterns, 3, start.vals = "across", restarts = 1)
+matrify2 = function(pdata = output) {
+  result = NULL
+  for(i in 1:length(pdata)) {
+      result[[i]] = tibble(pdata[[i]])
+  }
+  result = bind_rows(result)
+  return(result)
+}
 
-set.seed(719)
-test2 <- blca.em(aware_patterns, 4, start.vals = "across", restarts = 1)
-
-set.seed(719)
-test3 <- blca.em(aware_patterns, 4, start.vals = "single", restarts = 20)
-
-test3$classprob
+df2 = vector(mode = "list", length = ncol(M))
+for(j in 1:ncol(M)) {
+  df2[[j]] = matrify2(pdata = output[[j]])
+}
 ```
-
-```{r, results = "hide"}
-fit1 = blca.boot(aware_patterns, fit = test3, B = 1000, relabel = TRUE)
-```
-
 
 ```{r}
-fit1
+union_df = bind_rows(df2) %>% 
+  rename("value" = "M[[i, j]]",
+         "column" = "cname[[j]]",
+         "row" = "rname[[i]]")
 ```
 
+```{r high df}
+high_df = union_df %>% 
+  filter(abs(value) >= 0.7,
+         value != 1,
+         i < j)
 
+high_df
+```
+
+# principal in psych package
+
+```{r principal}
+fit = principal(M, 4, cor = "tet", rotate = "geominQ")
+fit
+```
+
+# iclust in psych package
+
+```{r iclust}
+# ?iclust
+# pdf()
+fit2 = iclust(M, plot = TRUE)
+# dev.off()
+fit2
+```
 
