@@ -1,0 +1,17 @@
+model{
+  p[1] = pi * sesrpos * covarv             + (1 - pi) * (1 - spsr) * (1 - sparv)
+  p[2] = pi * sesrneg * (1 - covarv)       + (1 - pi) * (1 - spsr) * sparv
+  p[3] = pi * (1 - sesrpos) * covarv       + (1 - pi) * spsr * (1 - sparv)
+  p[4] = pi * (1 - sesrneg) * (1 - covarv) + (1 - pi) * spsr * sparv
+  sesrneg = 1 - ratio * (1 - sesrpos)
+      
+  y[1:4] ~ dmulti(p[1:4], N)
+  pi ~ dunif(0, 1)
+  sesrpos ~ dunif(0, 1)
+  spsr = 1
+      
+  covarv ~ dunif(0, 1)  
+  sparv = 1
+  R ~ dnorm( 0.3920421, 4.0)
+  ratio = exp( R )
+}

@@ -25,27 +25,33 @@ The Xia et al. (2020) paper used the `rjags` to fit a Bayesian latent class mode
 ## 1. Load data for Eswatini
 
 ```{r}
-?drive_auth_configure
-drive_auth_configure()
+# ?drive_auth_configure
+# drive_auth_configure()
 # drive_auth_config(active = FALSE)
-drive_auth(email = "jsg2145@icap.columbia.edu")
+# drive_auth(email = "jsg2145@icap.columbia.edu")
 
-drive_auth(email = "jsg2145@icap.columbia.edu", scopes = "https://www.googleapis.com/auth/drive.readonly")
+# drive_auth(email = "jsg2145@icap.columbia.edu", scopes = "https://www.googleapis.com/auth/drive.readonly")
 
 drive_auth(scopes = "https://www.googleapis.com/auth/drive.readonly")
 
 drive_user()
 
-x <- drive_get("~/PHIA Data Collaboration/Data/Public Release/Eswatini/Shims22016adultbio.csv")
-x <- drive_get("https://docs.google.com/spreadsheets/d/1FtvuLal09-fpY0awf759dCSoimueItKF/view?usp=sharing")
-x <- drive_get("https://drive.google.com/file/d/1FtvuLal09-fpY0awf759dCSoimueItKF/view?usp=sharing")
-
-x$id
-
-drive_download(file = x, path = "./data/Shims22016adultbio.csv", overwrite = TRUE)
-
-bio <- import("G:\\My Drive\\PHIA Data Collaboration\\Data\\Public Release\\Eswatini\\shims22016adultbio.sas7bdat")
-ind <- import("G:\\My Drive\\PHIA Data Collaboration\\Data\\Public Release\\Eswatini\\shims22016adultind.sas7bdat")
+# x <- drive_get("~/PHIA Data Collaboration/Data/Public Release/Eswatini/Shims22016adultbio.csv")
+# x <- drive_get("https://docs.google.com/spreadsheets/d/1FtvuLal09-fpY0awf759dCSoimueItKF/view?usp=sharing")
+x <- as_id("https://drive.google.com/file/d/1FtvuLal09-fpY0awf759dCSoimueItKF/view?usp=sharing")
+y <- as_id("https://drive.google.com/file/d/1FNfNzuQRcUWWDEnzcjYCzJjRgzKdrie2/view?usp=sharing")
+# x$id
+temp <- tempfile()
+biodl <- drive_download(file = x, path = temp, overwrite = TRUE)
+temp <- tempfile()
+inddl <- drive_download(file = y, path = temp, overwrite = TRUE)
+# str(bio)
+bio <- read_csv(biodl$local_path) %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(varstrat, varunit), .fns = as.numeric))
+ind <- read_csv(inddl$local_path)
+head(bio)
+head(ind)
 ```
 
 ## Select HIV+ people with non-missing values of the relevant variables
@@ -53,7 +59,11 @@ ind <- import("G:\\My Drive\\PHIA Data Collaboration\\Data\\Public Release\\Eswa
 ```{r}
 eswatini.data <- ind %>%
   select(-contains("intwt"), -contains("vmpstw"), -contains("rfirs"), -starts_with("part")) %>%
-  left_join(bio) %>%
+  mutate(bt_status = as.numeric(bt_status)) %>% 
+  left_join(bio, by = c("country", "householdid", "personid", "gender", "age", "hivstatusfinal", "surveystdt", "bt_status", "varstrat", "varunit")) %>% 
+# 
+# head(eswatini.data) %>% 
+#   select(ends_with(".x"))
   filter(bt_status == 1 & hivstatusfinal == 1 & arvstatus %in% c(1,2) & awareselfreported %in% c(1,2))
 ```
 
@@ -191,7 +201,7 @@ initial.values <- list(
                         list( pi = 0.3, R = 0.1, covarv = .2)
                       )
 
-model <- jags.model("xiamodel.bug", data = model.data, n.chains = 4)
+model <- jags.model("./data/xiamodel.txt", data = model.data, n.chains = 4)
 
 update(model, n.iter=1000)
 samples <- coda.samples(model, variable.names=c("pi", "ratio", "sesrpos", "sesrneg", "covarv", "p"),
@@ -211,7 +221,7 @@ There's also another package called `run.jags` which can be used - it has some o
 ```{r run.jags, cache = TRUE}
 monitors <- c("pi", "ratio", "sesrpos", "sesrneg", "covarv")
 
-out <- run.jags(model="xiamodel.bug", monitor=monitors,
+out <- run.jags(model="./data/xiamodel.txt", monitor=monitors,
                  data=model.data, n.chains=4, method="parallel", inits=initial.values)
 
 print(out)
@@ -256,7 +266,7 @@ initial.values <- list(
   list( pi = 0.6, R = 0.4, covarv = .8)
 )
 
-model.vl <- jags.model("xiamodel.bug", data = model.data.vl, n.chains = 2)
+model.vl <- jags.model("./data/xiamodel.txt", data = model.data.vl, n.chains = 2)
 
 update(model.vl, n.iter=1000)
 samples.vl <- coda.samples(model.vl, variable.names=c("pi", "ratio", "sesrpos", "sesrneg", "covarv", "p"),
@@ -288,8 +298,13 @@ library(pals)
 library(RColorBrewer)
 library(colorRamps)
 
-multicountry.data <- import("multicountry_model_out_2.xlsx")
+z = as_id("https://drive.google.com/file/d/1bZ0-ShZ8535-3d7GvOYkiMLllbb5e58S/view?usp=sharing")
 
+multicountry.datadl <- drive_download(file = z, path = temp, overwrite = TRUE)
+
+# str(multicountry.datadl)
+
+multicountry.data = readxl::read_xlsx(multicountry.datadl$local_path)
 #awareness <- 
   #filter(var == "covarv")
   #filter(var == "ratio")
@@ -420,4 +435,3 @@ ggplot(data = aware_adj_plot, aes(x = Mean_AdjUnwgtP, y = Mean_arvstatus, colour
 
 
 ```
-
