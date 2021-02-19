@@ -172,7 +172,7 @@ model <- '
      oth_art_care ~~ reported_positive
      arvstatus ~~ reported_positive + vlunder200
 '
-fit <- sem(model, data=aware_patterns)
+fit <- fa(model, data=aware_patterns)
 lavInspect(fit, "theta")
 summary(fit)
 graph_sem(fit)

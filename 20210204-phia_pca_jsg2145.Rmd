@@ -45,7 +45,7 @@ bio <- read_csv(file = "./data/Shims22016adultbio.csv",
                       progress = show_progress(), 
                       skip_empty_rows = TRUE) %>% 
   janitor::clean_names() %>% 
-  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt, -resultvlc), ~as.numeric(.x)))
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt, -resultvlc), ~as.numeric(.)))
 
 
 ind <- read_csv(file = "./data/Shims22016adultind.csv") %>% 
@@ -58,15 +58,15 @@ ind <- read_csv(file = "./data/Shims22016adultind.csv") %>%
 ## This is the primary difference between this data set and others
 
 ```{r}
-bio_select <- bio %>% 
-    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+bio_select <- bio %>%
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>%
   # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
     select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
     filter(bt_status == 1,
-           hivstatusfinal == 1) %>% 
-           # arvstatus == 1) %>% 
-    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
-    mutate( resultvlc = recode(resultvlc, 
+           hivstatusfinal == 1) %>%
+           # arvstatus == 1) %>%
+    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>%
+    mutate( resultvlc = recode(resultvlc,
                     "< LLOD" = "1",
                     "< LLOQ: 20" = "20",
                     "< LLOQ: 40" = "40",
@@ -74,7 +74,7 @@ bio_select <- bio %>%
                     "< LLOQ: 839" = "839",
                     "> ULOQ 10000000" = "10000000"),
             resultvlc = as.numeric(resultvlc),
-            vlunder200 = if_else(resultvlc < 200, 1, 2)) 
+            vlunder200 = if_else(resultvlc < 200, 1, 2))
 
 bio_select %>% 
   select(vlunder200, everything()) %>% 
@@ -103,6 +103,7 @@ bio_select_mod <- bio_select %>%
             arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
             oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
             across(-personid, recode_one_zero))
+
 ```
 
 # Keep "arvstatus" in the model
@@ -229,4 +230,133 @@ fit2 = iclust(M, plot = TRUE)
 # dev.off()
 fit2
 ```
+
+## redo the pca
+
+```{r}
+pca_df = bio %>% 
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>%
+           # arvstatus == 1) %>% 
+    select(personid, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv")), -contains(c("part", "start", "partner", "vlnc", "child", "postell", "nors", "lifetime", "hivccost", "arvnrpg")), -ends_with(c("ty", "sy", "fy", "cly"))) %>% #remove age
+    mutate( resultvlc = recode(resultvlc, 
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2)) %>% 
+  select(-resultvlc, -indstatus, -bt_status, -hivstatusfinal, -hiv1statusfinalsurvey)
+  # mutate(across(.fns = ~na_if(., 99)))
+  # mutate(across(.fns = ~replace_na(., NA)))
+  data.frame()
+  # mutate(across(.fns=as_factor)) # took out hivtfposy for categorical data reasons, hivrslr, arvtklb, arvcntn missing > 0.95
+```
+
+```{r}
+output = NULL
+for (i in 1:72) {
+  output[[i]] = unique(pull(pca_df[,-1], i))
+  output[[i]] = rbind(output[[i]])
+}
+
+output %>% 
+  unlist() %>% 
+  unique()
+output_df = bind_rows(output)
+output
+
+unique(pca_df[[6]])
+
+
+```
+
+```{r}
+
+principal(pca_df[,-1], nfactors = 6)
+which(skimr::skim(pca_df)$complete_rate == 1)
+
+pca_df_skimd = pca_df[,-c(9, 25, 26, 32:47, 50, 54, 58:66, 72:86)]
+
+pca_df_skimd = pca_df_skimd %>% 
+  select(-personid)
+
+pca_df_skimd_df = pca_df_skimd %>% 
+  mutate(across(.fns = as.numeric),
+         across(.fns = ~replace_na(0)))
+
+# pca_df_skimd[37]
+
+skimr::skim(pca_df[,c(2, 8, 22, 25, 70)])
+
+pca_df[3]
+
+pca_df %>% 
+  str()
+
+pca_df %>% 
+  pull(6)
+?fa.parallel
+?fa
+?cor
+corrplot(pca_df[,-1])
+M = cor(pca_df[,-1])
+corrplot(M)
+
+scree = fa(pca_df[,-1], nfactors = 7)
+which(complete.cases(pca_df))
+# scree = principal(pca_df[,-1], nfactors = 7)
+# scree = fa.parallel(pca_df[,c(2, 8, 22, 25, 70)], cor = "mixed", fm = "wls", sim = FALSE)
+# scree = fa.parallel(pca_df[,-1], fm = "wls")
+```
+
+```{r}
+pca_df2 <- bio %>%
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>%
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>%
+           # arvstatus == 1) %>%
+    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>%
+    mutate( resultvlc = recode(resultvlc,
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2)) %>% 
+  select(hivrslr, hivtstrslt, hivpsbp, hivrtpg, hivtstever, hivtsbp, cd4testever, arvstakenev, arvscurrent, arvtklb, arvcntn, hivcare)
+```
+
+```{r}
+
+skimr::skim(pca_df2)
+?complete.cases
+
+fit = fa(pca_df2, nfactors = 2, fm = "wls")
+
+# output = NULL
+# for (i in 1:nrow(pca_df2)) {
+#   output[[i]] = complete.cases(pca_df2[i,])
+# }
+
+pca_df2 %>% 
+  mutate(complete = complete.cases(.)) %>% 
+  select(complete, everything()) %>% 
+  filter(complete == TRUE)
+
+```
+
+```{r}
+skimr::skim(bio_select)
+```
+
 
