@@ -112,14 +112,15 @@ bio_select_mod <- bio_select %>%
 modelvars <- c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus", "vlunder200")
 # Remove all rows which have values other than 0 or 1
 aware_patterns <- bio_select_mod %>% 
-  select( all_of(modelvars) ) %>%
-  filter( across(everything(), ~ .x %in% c(0,1)))
+  dplyr::select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1))) %>% 
+  mutate(across(.cols = c(reported_negative, never_tested), .fns = ~recode(., "0" = 1, "1" = 0)))
 ```
 
 # eigenvalue scree plot
 
 ```{r}
-awareparallel = fa.parallel(aware_patterns, cor = "tet", fa = "pc")
+awareparallel = fa.parallel(aware_patterns, cor = "tet", fa = "both")
 awareparallel$pc.values
 awareparallel$pc.sim
 ```
@@ -132,6 +133,8 @@ awarealpha
 ```
 
 This indicates that "never tested" might should be dropped?
+
+If never_tested is dropped, 
 
 # Exploratory Factor Analysis
 
@@ -359,4 +362,33 @@ pca_df2 %>%
 skimr::skim(bio_select)
 ```
 
+# remove never_tested, reported_negative
 
+```{r}
+modelvars <- c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  dplyr::select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1))) %>% 
+  mutate(across(.cols = c(reported_negative, never_tested), .fns = ~recode(., "0" = 1, "1" = 0)))
+```
+
+# eigenvalue scree plot
+
+```{r}
+awareparallel = fa.parallel(aware_patterns, cor = "tet", fa = "both")
+awareparallel$pc.values
+awareparallel$pc.sim
+```
+
+```{r}
+?fa
+
+res2 = fa(aware_patterns, 4, cor = 'tet', rotate = "geominQ", fm = "wls")
+# res3 = fa(aware_patterns, 3, cor = 'tet', rotate = "geominQ", fm = "wls")
+
+res2
+# res3
+
+fa.diagram(res2, digits = 2)
+```

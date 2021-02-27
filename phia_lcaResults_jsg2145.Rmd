@@ -367,3 +367,90 @@ postClassProbs(awareARTVL.lca4) %>%
   mutate(p_vls = freq/sum(freq))
 ```
 
+```{r}
+aware_patterns <- bio_select_mod %>% 
+  dplyr::select(arvstatus, reported_positive, vlunder200, oth_art_care, arvstakenev, arvscurrent) %>%
+  filter( across(everything(), ~ .x %in% c(0,1))) %>% 
+  mutate(across(everything(), ~ recode(., "0" = 2)))
+```
+
+```{r}
+library(poLCA)
+
+fit1 = poLCA(formula = cbind(arvstatus, reported_positive, vlunder200, oth_art_care, arvstakenev, arvscurrent)~1, data = aware_patterns, nclass = 4)
+```
+
+```{r}
+postpredclass = function(fit = fit1) {
+
+  posterior_df = fit$posterior %>% 
+    as_tibble()
+  
+  extable = fit$y %>% 
+    add_column(fit$predclass) %>% 
+    add_column(posterior_df) %>% 
+    rename(predClass = "fit$predclass") %>% 
+    # mutate(total = n()) %>% 
+    # group_by(momhlth, momfit, momdiet, mom_myfd, mom_mypa, mom_mywt, predClass) %>% 
+    # mutate(prob = round(n()/total*100, 2)) %>%
+    # distinct() %>% 
+    arrange(predClass)
+  
+  return(extable)
+}
+```
+
+```{r}
+cleanoutput = function(fit = fit1) {
+  result <-
+    round(
+  rbind(fit$probs$arvstatus[,2],
+  fit$probs$reported_positive[,2],
+  fit$probs$vlunder200[,2])*100, 2)
+  # fit$probs$mom_myfd[,2],
+  # fit$probs$mom_mypa[,2],
+  # fit$probs$mom_mywt[,2])*100,1)
+  
+  output = result %>% 
+    data.frame(row.names = c("arvstatus", "reported_positive", "vlunder200")) %>% 
+    as_tibble(rownames = NA) %>% 
+    rownames_to_column() %>% 
+    janitor::clean_names()
+  
+  return(output)
+}
+```
+
+```{r}
+postpredclass(fit1) %>% 
+  group_by(arvstatus, reported_positive, vlunder200) %>% 
+  summarize(total = n(),
+            predClass = predClass,
+            V1 = V1,
+            V2 = V2) %>% 
+  distinct() %>% 
+  arrange(predClass)
+
+cleanoutput(fit1)
+```
+
+```{r}
+library(BayesLCA)
+
+aware_patterns2 <- bio_select_mod %>% 
+  dplyr::select(arvstatus, reported_positive, vlunder200, never_tested, reported_negative) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+
+fit2 = blca.em(aware_patterns2, 4, start.vals = "across", restarts = 20)
+
+fit3 = blca.em(aware_patterns2, 4, start.vals = "single", restarts = 20)
+```
+
+```{r}
+fit4 = blca.boot(aware_patterns2, fit = fit3, B = 1000, relabel = TRUE)
+fit4$itemprob
+```
+
+
+
+
