@@ -1,0 +1,255 @@
+---
+title: "20210227-phia_2stepLCA_jsg2145"
+author: "Jared Garfinkel"
+date: "2/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(randomLCA)
+library(gt)
+library(caret)
+library(poLCA)
+library(BayesLCA)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	# cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+# read in data
+
+```{r}
+bio <- read_csv(file = "./data/Shims22016adultbio.csv",
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE) %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt, -resultvlc), ~as.numeric(.x)))
+
+
+ind <- read_csv(file = "./data/Shims22016adultind.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt), ~as.numeric(.x)))
+```
+
+# bt_status = 1, hivstatusfinal = 1, arvstatus = 1
+
+## This is the primary difference between this data set and others
+
+```{r}
+bio_select <- bio %>% 
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>% 
+    select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+    mutate( resultvlc = recode(resultvlc, 
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2)) 
+
+# bio_select_notarv <- bio %>% 
+#     left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+#   # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+#     select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+#     filter(bt_status == 1,
+#            hivstatusfinal == 1) %>% 
+#     select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+#     mutate( resultvlc = recode(resultvlc, 
+#                     "< LLOD" = "1",
+#                     "< LLOQ: 20" = "20",
+#                     "< LLOQ: 40" = "40",
+#                     "< LLOQ: 400" = "400",
+#                     "< LLOQ: 839" = "839",
+#                     "> ULOQ 10000000" = "10000000"),
+#             resultvlc = as.numeric(resultvlc),
+#             vlunder200 = if_else(resultvlc < 200, 1, 2))
+```
+
+
+```{r preserve 2 variables}
+bio_select %>% 
+  select(vlunder200, everything()) %>% 
+  group_by(vlunder200) %>%
+  summarize(freq = n())
+```
+
+# clean the data
+
+```{r}
+recode_one_zero <- function(x) {
+  if_else( is.na(x), 99,
+  if_else( as.numeric(x) %in% c(0, 2), 0, # JSG
+  if_else( as.numeric(x) == 1, 1, 99)
+  ))
+}
+
+bio_select_mod1 <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero)) %>% 
+  filter(arvstatus == 1)
+
+bio_select_mod0 <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero)) %>% 
+  filter(arvstatus == 0)
+
+bio_select_mod <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero))
+```
+
+
+```{r}
+bio_select_var = bio %>% 
+  filter(bt_status == 1,
+         hivstatusfinal == 1) %>% 
+  select(personid, awareartselfreported)
+```
+
+```{r}
+modelvars <- c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  dplyr::select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1))) %>% 
+  mutate(across(everything(), ~ recode(., "0" = 2)))
+# aware_patterns$vlunder200
+```
+
+```{r}
+set.seed(719)
+fit1 = poLCA(cbind(never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus)~1, data = aware_patterns, nclass=4)
+```
+
+```{r}
+aware_patterns2 <- bio_select_mod %>% 
+  dplyr::select(arvstatus, reported_positive, never_tested, reported_negative, arvstakenev, arvscurrent, oth_art_care) %>%
+  filter( across(everything(), ~ .x %in% c(0,1)))
+
+set.seed(719)
+bfit = blca.em(aware_patterns2, 4, start.vals = "single", restarts = 20)
+
+bfit
+```
+
+```{r}
+bfit$Z %>%
+  data.frame() %>% 
+  as_tibble(rownames = NA) %>% 
+  rownames_to_column() %>% 
+  janitor::clean_names() %>% 
+  filter(group_1 > group_2 & group_1 > group_3 & group_1 > group_4 | group_3 > group_1 & group_3 > group_2 & group_3 > group_4)
+```
+
+```{r}
+bfit %>% str()
+bfit$itemprob
+```
+
+
+
+```{r}
+postpredclass = function(fit = fit1) {
+
+  posterior_df = fit$posterior %>% 
+    as_tibble()
+  
+  extable = fit$y %>% 
+    add_column(fit$predclass) %>% 
+    add_column(posterior_df) %>% 
+    rename(predClass = "fit$predclass") %>% 
+    arrange(predClass)
+  
+  return(extable)
+}
+```
+
+```{r}
+cleanoutput = function(fit = fit1) {
+  result <-
+    round(
+  rbind(fit$probs$arvstatus[,2],
+  fit$probs$reported_positive[,2],
+  # fit$probs$vlunder200[,2],
+  fit$probs$arvstakenev[,2],
+  fit$probs$arvscurrent[,2],
+  fit$probs$reported_negative[,2],
+  fit$probs$never_tested[,2],
+  fit$probs$oth_art_care[,2])*100, 2)
+  # fit$probs$mom_myfd[,2],
+  # fit$probs$mom_mypa[,2],
+  # fit$probs$mom_mywt[,2])*100,1)
+  
+  output = result %>% 
+    data.frame(row.names = c("arvstatus", "reported_positive", "arvstakenev", "arvscurrent", "reported_negative", "never_tested", "oth_art_care")) %>% 
+    as_tibble(rownames = NA) %>% 
+    rownames_to_column() %>% 
+    janitor::clean_names()
+  
+  return(output)
+}
+```
+
+```{r}
+postpredclass(fit1)
+
+cleanoutput(fit1)
+```
+
+
+

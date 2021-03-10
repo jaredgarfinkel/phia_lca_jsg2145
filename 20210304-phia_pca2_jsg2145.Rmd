@@ -1,0 +1,440 @@
+---
+title: "20210304-phia_pca2_jsg2145"
+author: "Jared Garfinkel"
+date: "3/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(psych)
+library(corrplot)
+library(poLCA)
+library(gt)
+library(lavaan)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	# cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+# read in data
+
+```{r}
+bio <- read_csv(file = "./data/Shims22016adultbio.csv",
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE) %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt, -resultvlc), ~as.numeric(.)))
+
+
+ind <- read_csv(file = "./data/Shims22016adultind.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt), ~as.numeric(.x)))
+```
+
+```{r}
+bio_select <- bio %>%
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>%
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    dplyr::select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>%
+           # arvstatus == 1) %>%
+    dplyr::select(age, gender, contains(c("arvstatus", "aware", "art", "vls", "result", "tri90", "arv", "test", "hiv")), -contains(c("part", "child", "hivpostell", "hivtstnors")), -ends_with(c("posy", "posm", "cfm", "cfy", "cly", "clm", "fty", "ftm", "testm", "testy"))) %>%
+    mutate( resultvlc = recode(resultvlc,
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2))
+```
+
+# start by accepting only variables with >80% complete rates
+
+```{r}
+bio_select_comp = bio_select[skimr::skim(bio_select)$complete_rate>0.8]
+
+bio_select_pca = bio_select_comp %>% 
+  mutate(across(.cols = -c("age", "resultvlc", "artduration"), .fns = ~if_else(.x == 1, 1, 0)),
+         artduration = recode(artduration, "4" = 0),
+         across(.cols = everything(), .fns = as.numeric),
+         across(.cols = everything(), .fns = ~replace_na(.x, 0)))
+
+# ?replace_na
+# 
+# head(bio_select_pca)
+
+##
+
+```
+
+```{r}
+# ?fa.parallel
+# 
+# bio_select_pca %>% 
+#   mutate(across(.fns = is.infinite))
+# 
+# bio_select_pca_dat = bio_select_pca %>% 
+#   data.frame()
+
+M = cor(bio_select_pca)
+
+M
+
+## correlations are NA
+
+bio_select_pca = bio_select_pca %>% 
+  dplyr::select(-c(hivstatusfinal, hiv1statusfinalsurvey))
+
+N = cor(bio_select_pca)
+
+corrplot(N, method = "circle", type = "lower", diag = FALSE)
+
+nrow(bio_select_pca)
+
+## No missing correlations
+```
+
+```{r}
+skimr::skim(bio_select_pca)
+
+fa.parallel(N, n.obs = 3003, nfactors = 1, cor = "mixed", fm = "ols")
+```
+
+```{r}
+q = fa(N, nfactors = 7, n.obs = 3003, rotate = "geominQ", fm = "ols", cor = "mixed")
+
+q$loadings
+```
+
+## LCA with 5 factors
+
+```{r}
+# bio_select_mod = bio_select %>% 
+#   mutate(prg = if_else(hivrtpg == 1 | hivtprg == 1 | hivtsbp == 1 | hivpsbp == 1 | hivttlb == 1 | hivrslr == 1 | testedpregnancyawaredetail == 1 | arvspregnancydetail == 2 | hivstatuslastpregnancy == 1 | arvtklb == 1, 1, 0),
+#          arvsvls = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | artinitiated12months == 1 | tri90art == 1| vls == 1 | tri90vls == 1 |arvstakenev == 1 | vlunder200 == 1 | artinitiated12months == 1 | artduration %in% c(1), 1, 0),
+#          wrns = if_else(aware == 1 | awareselfreported == 1 | awareartselfreported == 0 | tri90aware == 1 | cd4testever == 1 | hivselfreport == 1 | hivtstrslt == 1 | hivcare == 1 | known_hiv_status == 1, 1, 0),
+#          tsd = if_else(evertested == 1 | hivtstever == 1, 1, 0)) %>% 
+#   dplyr::select(prg, arvsvls, wrns, tsd, artduration) %>% 
+#   mutate(artduration = recode(artduration, "2" = 1, "3" = 1, "4" = 2, "99" = 2),
+#          across(.fns = ~recode(.x, "0" = 2)),
+#          across(.fns = ~replace_na(.x, 2)))
+
+bio_select_mod = bio_select %>% 
+  mutate(prg = if_else(hivrtpg == 1 | hivtprg == 1 | hivtsbp == 1 | hivpsbp == 1 | hivttlb == 1 | hivrslr == 1 | testedpregnancyawaredetail == 1 | arvspregnancydetail == 2 | hivstatuslastpregnancy == 1 | arvtklb == 1, 1, 0),
+         arvs = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | tri90art == 1 | arvstakenev == 1, 1, 0),
+         vlspr = if_else(vls == 1 | tri90vls == 1 | vlunder200 == 1, 1, 0),
+         wrns = if_else(aware == 1 | awareselfreported == 1 | awareartselfreported == 0 | tri90aware == 1 | cd4testever == 1 | hivselfreport == 1 | hivtstrslt == 1 | hivcare == 1 | known_hiv_status == 1, 1, 0),
+         tsd = if_else(evertested == 1 | hivtstever == 1, 1, 0),
+         whenart = if_else(artinitiated12months == 1 | artduration %in% c(1, 2, 3), 1, 0),
+         whicharv = if_else(arvefv == 1 | arvlpv == 1 | arvnvp == 1, 1, 0)) %>% 
+  dplyr::select(prg, arvs, vlspr, wrns, tsd, whenart, whicharv) %>% 
+  mutate(across(.fns = ~recode(.x, "0" = 2)),
+         across(.fns = ~replace_na(.x, 2)))
+```
+
+```{r}
+set.seed(719)
+pca_lca_fit <- poLCA(formula = cbind(prg, arvs, vlspr, wrns, tsd, whenart, whicharv)~1, data = bio_select_mod, nclass = 4, maxiter = 10000)
+```
+
+```{r}
+postpredclass = function(fit = fit1) {
+
+  posterior_df = fit$posterior %>% 
+    as_tibble()
+  
+  extable = fit$y %>% 
+    add_column(fit$predclass) %>% 
+    add_column(posterior_df) %>% 
+    rename(predClass = "fit$predclass")
+    # mutate(total = n()) %>% 
+    # group_by(momhlth, momfit, momdiet, mom_myfd, mom_mypa, mom_mywt, predClass) %>% 
+    # mutate(prob = round(n()/total*100, 2)) %>%
+    # distinct() %>% 
+    # arrange(predClass)
+  
+  return(extable)
+}
+```
+
+```{r}
+cleanoutput = function(fit = fit1) {
+  result <-
+    round(
+  rbind(fit$probs$prg[,2],
+  fit$probs$arvs[,2],
+  fit$probs$vlspr[,2],
+  fit$probs$wrns[,2],
+  fit$probs$tsd[,2],
+  fit$probs$whenart[,2],
+  fit$probs$whicharv[,2])*100,1)
+  
+  output = result %>% 
+    data.frame(row.names = c("prg", "arvs", "vlspr", "wrns", "tsd", "whenart", "whicharv")) %>% 
+    as_tibble(rownames = NA) %>% 
+    rownames_to_column() %>% 
+    janitor::clean_names()
+  
+  return(output)
+}
+```
+
+```{r}
+
+
+classtbl = round(postpredclass(pca_lca_fit), 2)
+
+classtbl
+
+# classtbl %>% 
+#   filter(predClass == 2)
+#   distinct()
+#   arrange(predClass)
+
+# classtbl %>% 
+#   gt() %>% 
+#   tab_row_group(group = "predClass",
+#                 rows = 1:4)
+#   tab_header(title = "Latent Class Analysis", 
+#              subtitle = "90-90-90 Status")
+
+# cleanoutput(pca_lca_fit)
+# 
+# 
+# 
+# plot(pca_lca_fit)
+
+```
+
+```{r}
+# skimr::skim(bio_select_pca)
+# 
+# matched_df = bio_select %>% 
+#   left_join(classtbl, by = c("prg", "arvs", "vlspr", "wrns", "tsd", "whenart", "whicharv")) %>% 
+#   distinct()
+# 
+# matched_df = bio_select %>% 
+#   mutate(prg = if_else(hivrtpg == 1 | hivtprg == 1 | hivtsbp == 1 | hivpsbp == 1 | hivttlb == 1 | hivrslr == 1 | testedpregnancyawaredetail == 1 | arvspregnancydetail == 2 | hivstatuslastpregnancy == 1 | arvtklb == 1, 1, 0),
+#          arvs = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | tri90art == 1 | arvstakenev == 1, 1, 0),
+#          vlspr = if_else(vls == 1 | tri90vls == 1 | vlunder200 == 1, 1, 0),
+#          wrns = if_else(aware == 1 | awareselfreported == 1 | awareartselfreported == 0 | tri90aware == 1 | cd4testever == 1 | hivselfreport == 1 | hivtstrslt == 1 | hivcare == 1 | known_hiv_status == 1, 1, 0),
+#          tsd = if_else(evertested == 1 | hivtstever == 1, 1, 0),
+#          whenart = if_else(artinitiated12months == 1 | artduration %in% c(1, 2, 3), 1, 0),
+#          whicharv = if_else(arvefv == 1 | arvlpv == 1 | arvnvp == 1, 1, 0)) %>% 
+#   dplyr::select(age, prg, arvs, vlspr, wrns, tsd, whenart, whicharv) %>% 
+#   mutate(across(-age, .fns = ~recode(.x, "0" = 2)),
+#          across(-age, .fns = ~replace_na(.x, 2))) %>% 
+#   add_column(classtbl$predClass)
+# 
+# matched_df %>% 
+#   group_by(`classtbl$predClass`) %>% 
+#   summarize(age = mean(age))
+# 
+# matched_df %>% 
+#   distinct(age, prg, arvs, vlspr, wrns, tsd, whenart, whicharv, .keep_all = TRUE)
+# 
+# matched %>%
+#   group_by(predClass) %>%
+#   summarize(age = mean(age))
+```
+
+# factor analysis with fewer variables
+
+```{r}
+fa.parallel(bio_select_mod, fm = "ols", nfactors = 1)
+```
+
+## princomp
+
+```{r}
+# ?princomp
+# 
+# pc_fit = princomp(bio_select_mod)
+# 
+# plot(pc_fit)
+# biplot(pc_fit)
+# print(pc_fit)
+# summary(pc_fit)
+# 
+# pc_fit$loadings
+```
+
+# higher complete rates only
+
+```{r}
+bio_select_comp2 = bio_select[skimr::skim(bio_select)$complete_rate>0.95]
+
+# bio_select_pca2 = bio_select_comp2 %>% 
+#   mutate(across(.cols = -c("age", "resultvlc", "artduration"), .fns = ~if_else(.x == 1, 1, 0)),
+#          artduration = recode(artduration, "4" = 0),
+#          across(.cols = everything(), .fns = as.numeric),
+#          across(.cols = everything(), .fns = ~replace_na(.x, 0)))
+
+bio_select_pca2 = bio_select_comp2 %>% 
+  dplyr::select(-c("age", "resultvlc", "artduration", "hivstatusfinal", "hiv1statusfinalsurvey", "hivtstlocation", "arvefv", "arvlpv", "arvnvp")) %>% 
+  mutate(arvspregnancydetail = if_else(arvspregnancydetail %in% c(1,2), 1, 0),
+         testedpregnancyawaredetail = if_else(testedpregnancyawaredetail %in% c(1,3), 1, 0),
+         testedreceiveddetail = if_else(testedreceiveddetail %in% c(1, 2, 3), 1, 0),
+         across(.fns = ~if_else(.x == 1, 1, 0)),
+         across(.cols = everything(), .fns = as.numeric),
+         across(.cols = everything(), .fns = ~replace_na(.x, 0)))
+
+# ?replace_na
+# 
+# head(bio_select_pca)
+
+##
+```
+
+```{r}
+M2 = cor(bio_select_pca2)
+
+M2
+
+## correlations are NA
+
+# bio_select_pca2 = bio_select_pca2 %>% 
+#   dplyr::select(-c(hivstatusfinal, hiv1statusfinalsurvey))
+# 
+# N2 = cor(bio_select_pca2)
+# 
+# N2
+
+corrplot(M2, method = "circle", type = "lower", diag = FALSE)
+
+nrow(bio_select_pca2)
+```
+
+```{r}
+set.seed(719)
+fa.parallel(M2, n.obs = 3003, nfactors = 1, cor = "mixed", fm = "ols")
+```
+
+```{r}
+s = fa(M2, nfactors = 6, n.obs = 3003, rotate = "geominQ", fm = "ols", cor = "mixed")
+s2 = fa(M2, nfactors = 5, n.obs = 3003, rotate = "geominQ", fm = "ols", cor = "tet")
+s3 = fa(M2, nfactors = 4, n.obs = 3003, rotate = "geominQ", fm = "ols", cor = "tet")
+
+s3$loadings
+```
+# one more cfa
+
+```{r model4 and model5}
+model4 <- 'prg_aware =~ testedpregnancyawaredetail + arvspregnancydetail + hivstatuslastpregnancy
+           awrns =~ aware + awareselfreported + tri90aware + hivselfreport + hivtstrslt + known_hiv_status
+           barvs =~ arvstatus + art + artselfreported + tri90art
+           atsd =~ evertested + testedreceiveddetail + hivtstever
+           bvlspr =~ vls + tri90vls + vlunder200 '
+
+model5 <- '
+          aware_prg =~ gender + testedpregnancyawaredetail + arvspregnancydetail + hivstatuslastpregnancy
+          wrns =~ aware + awareselfreported + awareartselfreported + hivselfreport + hivtstrslt + known_hiv_status
+          arvs =~ arvstatus + art + artselfreported
+          tsd =~ evertested + testedreceiveddetail + hivtstever
+          vlspr =~ vls + vlunder200
+'
+
+model6 <- 'awrns =~ aware + awareselfreported + tri90aware + hivselfreport + hivtstrslt + known_hiv_status
+           barvs =~ arvstatus + art + artselfreported + tri90art
+           atsd =~ evertested + testedreceiveddetail + hivtstever
+           bvlspr =~ vls + tri90vls + vlunder200 '
+```
+
+```{r}
+# cov(bio_select_pca2)
+
+bio_select_cfa = bio_select_pca2 %>% 
+  dplyr::select(-tri90, -artinitiated12months, -recentlagvlarv, -awareartselfreported, -gender) %>% 
+  mutate(across(.fns = ~recode(.x, "0" = 2))) %>% 
+  data.frame()
+
+# M3 = cor(bio_select_cfa)
+# 
+# cov(bio_select_cfa)
+# 
+# corrplot(M3, "circle", "lower", diag = FALSE)
+```
+
+
+```{r, eval = FALSE}
+fit4 = cfa(model6, data = bio_select_pca2)
+
+skimr::skim(bio_select_cfa)
+
+lavInspect(fit4, "std.lv")
+
+summary(model4, rsquare = TRUE, fit.measures = TRUE)
+bio_select_cfa %>% 
+  str()
+```
+# yet another model
+
+```{r}
+bio_select_mod2 = bio_select_pca2 %>% 
+  mutate(wrns = if_else(aware == 1 | awareselfreported == 1 | awareartselfreported == 0 | hivselfreport == 1 | hivtstrslt == 1 | known_hiv_status == 1, 1, 0),
+         arvs = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | artinitiated12months == 1, 1, 0),
+         prg = if_else(testedpregnancyawaredetail == 1 | arvspregnancydetail == 1 | hivstatuslastpregnancy == 1, 1, 0),
+         tsd = if_else(evertested == 1 | testedreceiveddetail == 1 | hivtstever == 1, 1, 0),
+         vlspr = if_else(vls == 1 | vlunder200 == 1, 1, 0),
+         across(.fns = ~recode(.x, "0" = 2)))
+```
+
+```{r}
+set.seed(719)
+pca_lca_fit3 <- poLCA(formula = cbind(prg, arvs, vlspr, wrns, tsd)~1, data = bio_select_mod2, nclass = 4, maxiter = 10000)
+```
+
+
+
+# another model
+
+```{r}
+bio_select_pca2 %>% 
+  mutate(wrns = if_else(aware == 1 | awareselfreported == 1 | tri90aware == 1 | hivselfreport == 1 | hivtstrslt == 1 | known_hiv_status == 1, 1, 0),
+         arvs = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | tri90art == 1 | vls == 1 | tri90vls == 1 | vlunder200 == 1, 1, 0),
+         tsd = if_else(hivtstever == 1 | evertested == 1, 1, 0), 
+         prg = if_else(hivstatuslastpregnancy == 1 | arvspregnancydetail == 1, 1, 0),
+         whicharv = if_else(arvefv == 1 | arvlpv == 1 | arvnvp == 1, 1, 0),
+         whenart = if_else(artduration==1, 1, 0)) %>% 
+  dplyr::select(wrns, arvs, tsd, prg, whicharv, whenart) %>% 
+  mutate(across(.fns = ~recode(.x, "0" = 2)))
+```
+
+```{r}
+set.seed(719)
+pca_lca_fit2 <- poLCA(formula = cbind(prg, arvs, wrns, tsd, whenart, whicharv)~1, data = bio_select_mod2, nclass = 4, maxiter = 10000)
+```
+
+```{r}
+t = fa(bio_select_pca2, nfactors = 3, n.obs = 3003, rotate = "geominQ", fm = "ols", cor = "mixed", max.iter = 10000)
+
+t$loadings
+```

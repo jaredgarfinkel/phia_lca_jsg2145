@@ -1,0 +1,504 @@
+---
+title: "20210304-phia_cfa_jsg2145"
+author: "Jared Garfinkel"
+date: "3/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(viridis)
+library(psych)
+library(corrplot)
+library(poLCA)
+library(gt)
+library(lavaan)
+library(semPlot)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	message = FALSE,
+	# cache = TRUE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+# read in data
+
+```{r}
+bio <- read_csv(file = "./data/Shims22016adultbio.csv",
+                      col_names = TRUE, 
+                      col_types = NULL,
+                      locale = default_locale(), 
+                      na = c("", "NA"), 
+                      quoted_na = TRUE,
+                      quote = "\"", 
+                      comment = "", 
+                      trim_ws = TRUE, 
+                      skip = 0,
+                      n_max = Inf, 
+                      progress = show_progress(), 
+                      skip_empty_rows = TRUE) %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt, -resultvlc), ~as.numeric(.)))
+
+
+ind <- read_csv(file = "./data/Shims22016adultind.csv") %>% 
+  janitor::clean_names() %>% 
+  mutate(across(.cols = c(-country, -householdid, -personid, -surveystdt), ~as.numeric(.x)))
+```
+
+```{r}
+# bio_select <- bio %>%
+#     left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>%
+#   # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+#     dplyr::select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+#     filter(bt_status == 1,
+#            hivstatusfinal == 1) %>%
+#            # arvstatus == 1) %>%
+#     dplyr::select(age, gender, contains(c("arvstatus", "aware", "art", "vls", "result", "tri90", "arv", "test", "hiv")), -contains(c("part", "child", "hivpostell", "hivtstnors")), -ends_with(c("posy", "posm", "cfm", "cfy", "cly", "clm", "fty", "ftm", "testm", "testy"))) %>%
+#     mutate( resultvlc = recode(resultvlc,
+#                     "< LLOD" = "1",
+#                     "< LLOQ: 20" = "20",
+#                     "< LLOQ: 40" = "40",
+#                     "< LLOQ: 400" = "400",
+#                     "< LLOQ: 839" = "839",
+#                     "> ULOQ 10000000" = "10000000"),
+#             resultvlc = as.numeric(resultvlc),
+#             vlunder200 = if_else(resultvlc < 200, 1, 2))
+```
+
+```{r}
+bio_select <- bio %>% 
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>% 
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    dplyr::select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>% 
+           # arvstatus == 1) %>% 
+    dplyr::select(personid, age, gender, contains(c("status", "aware", "art", "vl", "tri90", "arv", "test", "hiv"))) %>% 
+    mutate( resultvlc = recode(resultvlc, 
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2)) 
+
+bio_select %>% 
+  dplyr::select(vlunder200, everything()) %>% 
+  group_by(vlunder200) %>%
+  summarize(freq = n())
+```
+
+# clean the data
+
+```{r}
+recode_one_zero <- function(x) {
+  if_else( is.na(x), 99,
+  if_else( as.numeric(x) %in% c(0, 2), 0, # JSG
+  if_else( as.numeric(x) == 1, 1, 99)
+  ))
+}
+
+bio_select_mod <- bio_select %>%
+    mutate( reported_positive = if_else( hivrslr == 1 | hivtstrslt == 1 | hivpsbp == 1 | hivrtpg == 1 | hivtfposy > 0, 1, 0, missing = 0),
+            never_tested = if_else(hivtstever == 2, 1, 0, missing = 0),
+            reported_negative = if_else(hivpsbp == 2 | (hivtsbp = 1 & hivrtpg == 2) | hivrslr == 2 | hivtstrslt == 2, 1, 0, missing = 0),
+            pos_test_year = if_else(hivtfposy > 0, 1, 0),
+            tested12mo = if_else(testedreceiveddetail %in% c(1,4), 1, 0),
+            cd4testever = recode_one_zero(cd4testever),
+            arvstakenev = if_else(arvstakenev == 1, 1, 0, missing = 0),
+            arvscurrent = if_else(arvscurrent == 1, 1, 0, missing = 0),
+            oth_art_care = if_else(arvtklb == 1 | arvcntn == 1 | hivcare == 1, 1, 0, missing = 0),
+            across(-personid, recode_one_zero))
+```
+
+# Keep "arvstatus" in the model
+
+```{r}
+modelvars <- c("never_tested", "reported_negative", "reported_positive", "arvstakenev", "arvscurrent", "oth_art_care", "arvstatus", "vlunder200")
+# Remove all rows which have values other than 0 or 1
+aware_patterns <- bio_select_mod %>% 
+  dplyr::select( all_of(modelvars) ) %>%
+  filter( across(everything(), ~ .x %in% c(0,1))) %>% 
+  mutate(across(.fns = ~recode(.x, "0" = 2)))
+
+# never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus, vlunder200
+```
+
+```{r}
+poLCA(formula = cbind(never_tested, reported_negative, reported_positive, arvstakenev, arvscurrent, oth_art_care, arvstatus, vlunder200)~1, data = aware_patterns, nclass = 4)
+```
+
+
+```{r}
+model <- '
+     unaware =~ never_tested + reported_negative
+     aware_art =~ arvscurrent + arvstatus + vlunder200 + arvstakenev
+     aware_notart =~ reported_positive
+     arvstatus ~~ vlunder200
+'
+```
+
+```{r}
+fit = cfa(model, data = aware_patterns)
+
+summary(fit, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit, power = TRUE, sort = TRUE)
+```
+
+# second try
+
+```{r}
+bio_select2 <- bio %>%
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>%
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    dplyr::select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>%
+           # arvstatus == 1) %>%
+    dplyr::select(age, gender, contains(c("arvstatus", "aware", "art", "vls", "result", "tri90", "arv", "test", "hiv")), -contains(c("part", "child", "hivpostell", "hivtstnors")), -ends_with(c("posy", "posm", "cfm", "cfy", "cly", "clm", "fty", "ftm", "testm", "testy"))) %>%
+    mutate( resultvlc = recode(resultvlc,
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2))
+```
+
+```{r}
+bio_select_mod2 = bio_select2 %>% 
+  mutate(prg = if_else(hivrtpg == 1 | hivtprg == 1 | hivtsbp == 1 | hivpsbp == 1 | hivttlb == 1 | hivrslr == 1 | testedpregnancyawaredetail == 1 | arvspregnancydetail == 2 | hivstatuslastpregnancy == 1 | arvtklb == 1, 1, 0),
+         arvs = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | tri90art == 1 | arvstakenev == 1, 1, 0),
+         vlspr = if_else(vls == 1 | tri90vls == 1 | vlunder200 == 1, 1, 0),
+         wrns = if_else(aware == 1 | awareselfreported == 1 | awareartselfreported == 0 | tri90aware == 1 | cd4testever == 1 | hivselfreport == 1 | hivtstrslt == 1 | hivcare == 1 | known_hiv_status == 1, 1, 0),
+         tsd = if_else(evertested == 1 | hivtstever == 1, 1, 0),
+         whenart = if_else(artinitiated12months == 1 | artduration %in% c(1, 2, 3), 1, 0),
+         whicharv = if_else(arvefv == 1 | arvlpv == 1 | arvnvp == 1, 1, 0)) %>% 
+  dplyr::select(prg, arvs, vlspr, wrns, tsd, whenart, whicharv) %>% 
+  mutate(across(.fns = ~recode(.x, "0" = 2)),
+         across(.fns = ~replace_na(.x, 2)))
+```
+
+```{r}
+# "prg", "arvs", "vlspr", "wrns", "tsd", "whenart", "whicharv"
+
+model2 <- '
+        aware =~ prg + wrns + tsd
+        aware_onart =~ arvs + whenart + whicharv
+        aware_onart_vls =~ vlspr
+        wrns ~~ arvs + whenart + whicharv + vlspr
+        arvs ~~ whenart + whicharv + vlspr
+        prg ~~ arvs + whenart + whicharv + vlspr
+'
+```
+
+```{r}
+fit2 = cfa(model2, data = bio_select_mod2)
+
+summary(fit2, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit2, power = TRUE, sort = TRUE)
+```
+
+# test another model
+
+```{r}
+bio_select3 <- bio %>%
+    left_join(ind, by = c("personid", "country", "householdid", "bt_status", "gender", "age", "surveystdt", "hivstatusfinal", "varstrat", "varunit")) %>%
+  # "avdprgmeth", "hivtstnors", "hivpostell", "sptgrgt", "stdl", "seekhelp", "unwantsxhelp")) %>%
+    dplyr::select(-contains("vmpstw"), -contains("hivk"), -contains("casi"), -contains("intw")) %>%
+    filter(bt_status == 1,
+           hivstatusfinal == 1) %>%
+           # arvstatus == 1) %>%
+    dplyr::select(age, gender, contains(c("arvstatus", "aware", "art", "vls", "result", "tri90", "arv", "test", "hiv")), -contains(c("part", "child", "hivpostell", "hivtstnors")), -ends_with(c("posy", "posm", "cfm", "cfy", "cly", "clm", "fty", "ftm", "testm", "testy"))) %>%
+    mutate( resultvlc = recode(resultvlc,
+                    "< LLOD" = "1",
+                    "< LLOQ: 20" = "20",
+                    "< LLOQ: 40" = "40",
+                    "< LLOQ: 400" = "400",
+                    "< LLOQ: 839" = "839",
+                    "> ULOQ 10000000" = "10000000"),
+            resultvlc = as.numeric(resultvlc),
+            vlunder200 = if_else(resultvlc < 200, 1, 2))
+```
+
+# higher complete rates only
+
+```{r}
+bio_select_comp3 = bio_select3[skimr::skim(bio_select3)$complete_rate>0.95]
+
+# bio_select_pca2 = bio_select_comp2 %>% 
+#   mutate(across(.cols = -c("age", "resultvlc", "artduration"), .fns = ~if_else(.x == 1, 1, 0)),
+#          artduration = recode(artduration, "4" = 0),
+#          across(.cols = everything(), .fns = as.numeric),
+#          across(.cols = everything(), .fns = ~replace_na(.x, 0)))
+
+bio_select_pca3 = bio_select_comp3 %>% 
+  dplyr::select(-c("age", "resultvlc", "artduration", "hivstatusfinal", "hiv1statusfinalsurvey", "hivtstlocation", "arvefv", "arvlpv", "arvnvp")) %>% 
+  mutate(arvspregnancydetail = if_else(arvspregnancydetail %in% c(1,2), 1, 0),
+         testedpregnancyawaredetail = if_else(testedpregnancyawaredetail %in% c(1,3), 1, 0),
+         testedreceiveddetail = if_else(testedreceiveddetail %in% c(1, 2, 3), 1, 0),
+         across(.fns = ~if_else(.x == 1, 1, 0)),
+         across(.cols = everything(), .fns = as.numeric),
+         across(.cols = everything(), .fns = ~replace_na(.x, 0)))
+
+# ?replace_na
+# 
+# head(bio_select_pca)
+
+##
+```
+
+```{r}
+bio_select_mod3 = bio_select_pca3 %>% 
+  mutate(wrns = if_else(aware == 1 | awareselfreported == 1 | awareartselfreported == 0 | hivselfreport == 1 | hivtstrslt == 1 | known_hiv_status == 1, 1, 0),
+         arvs = if_else(arvstatus == 1 | art == 1 | artselfreported == 1 | artinitiated12months == 1, 1, 0),
+         prg = if_else(testedpregnancyawaredetail == 1 | arvspregnancydetail == 1 | hivstatuslastpregnancy == 1, 1, 0),
+         tsd = if_else(evertested == 1 | testedreceiveddetail == 1 | hivtstever == 1, 1, 0),
+         vlspr = if_else(vls == 1 | vlunder200 == 1, 1, 0),
+         across(.fns = ~recode(.x, "0" = 2)))
+```
+
+
+```{r}
+model3 <- '
+        aware_prg =~ prg
+        aware_notart =~ wrns + tsd
+        onart =~ arvs
+        artvls =~ vlspr
+'
+```
+
+```{r}
+fit3 = cfa(model3, data = bio_select_mod3)
+
+summary(fit3, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit3, power = TRUE, sort = TRUE)
+```
+
+# one more model
+
+```{r}
+model4 <- '
+          aware_prg =~ testedpregnancyawaredetail + arvspregnancydetail + hivstatuslastpregnancy
+          wrns =~ aware + awareselfreported + tri90aware + hivselfreport + hivtstrslt + known_hiv_status
+          arvs =~ arvstatus + art + artselfreported + tri90art
+          tsd =~ evertested + testedreceiveddetail + hivtstever
+          vlspr =~ vls + tri90vls + vlunder200
+'
+
+model5 <- '
+          aware_prg =~ gender + testedpregnancyawaredetail + arvspregnancydetail + hivstatuslastpregnancy
+          wrns =~ aware + awareselfreported + awareartselfreported + hivselfreport + hivtstrslt + known_hiv_status
+          arvs =~ arvstatus + art + artselfreported
+          tsd =~ evertested + testedreceiveddetail + hivtstever
+          vlspr =~ vls + vlunder200
+'
+
+model6 <- '
+          aware_prg =~ testedpregnancyawaredetail + arvspregnancydetail + hivstatuslastpregnancy
+          wrns =~ aware + awareselfreported + tri90aware + hivselfreport + hivtstrslt + known_hiv_status
+          arvs =~ arvstatus + art + artselfreported + tri90art + vls + tri90vls + vlunder200
+          tsd =~ evertested + testedreceiveddetail + hivtstever
+'
+
+model7 <- '
+          aware_prg =~ testedpregnancyawaredetail + arvspregnancydetail + hivstatuslastpregnancy
+          wrns =~ aware + awareselfreported + tri90aware + hivselfreport + hivtstrslt + known_hiv_status
+          arvs =~ arvstatus + art + artselfreported + tri90art
+          tsd =~ evertested + testedreceiveddetail + hivtstever
+          vlspr =~ vls + tri90vls + vlunder200
+          wrns ~ aware_prg
+          arvs ~ wrns + aware_prg
+          vlspr ~ arvs
+'
+
+model8 <- '
+          wrns =~ aware + awareselfreported + tri90aware + hivselfreport + hivtstrslt + known_hiv_status + testedpregnancyawaredetail + hivstatuslastpregnancy
+          arvs =~ arvstatus + art + artselfreported + tri90art + arvspregnancydetail
+          tsd =~ evertested + testedreceiveddetail + hivtstever
+          vlspr =~ vls + tri90vls + vlunder200
+'
+```
+
+```{r}
+# cov(bio_select_pca2)
+
+# bio_select_cfa = bio_select_pca3 %>% 
+#   dplyr::select(-c("gender", "awareartselfreported")) %>% 
+#   mutate(across(.fns = ~recode(.x, "0" = 2)))
+
+bio_select_mod4 = bio_select %>% 
+  dplyr::select(gender, testedpregnancyawaredetail, arvspregnancydetail, hivstatuslastpregnancy, awareselfreported, hivselfreport, hivtstrslt, known_hiv_status, arvstatus, artselfreported, evertested, testedreceiveddetail, hivtstever, vlunder200) %>% 
+  mutate(across(.fns = ~recode(.x, "99" = 2)),
+         # tri90art = if_else(tri90art == 1, 1, 2),
+         # tri90vls = if_else(tri90vls == 1, 1, 2),
+         testedreceiveddetail = if_else(testedreceiveddetail %in% c(1,2,3), 1, 2),
+         testedpregnancyawaredetail = if_else(testedpregnancyawaredetail %in% c(1, 3), 1, 2),
+         evertested = if_else(evertested == 1, 1, 2),
+         hivtstrslt = if_else(hivtstrslt == 1, 1, 2),
+         hivtstever = if_else(hivtstever == 1, 1, 2),
+         known_hiv_status = if_else(known_hiv_status == 1, 1, 2),
+         hivselfreport = if_else(hivselfreport == 1, 1, 2),
+         arvspregnancydetail = if_else(arvspregnancydetail %in% c(1,2), 1, 2),
+         across(.fns = ~replace_na(.x, 2)))
+         # across(.fns = ~recode(.x, "2" = 0)))
+
+# ncol(bio_select_cfa)
+output = NULL
+for (i in 1:ncol(bio_select_mod4)) {
+  output[[i]] = unique(bio_select_mod4[[i]])
+}
+
+output
+# bio_select$evertested
+# 
+skimr::skim(bio_select_mod4)
+# 
+# bio_select_mod4 %>% 
+#   str()
+
+?cfa
+```
+
+
+```{r}
+C = cor(bio_select_mod4)
+
+corrplot(C)
+
+fit4 = cfa(model4, data = bio_select_mod4, ordered = names(bio_select_mod4), estimator = "ULS")
+
+summary(fit4, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit4, power = TRUE, sort = TRUE)
+
+lavInspect(fit4, "cov.lv")
+```
+
+```{r}
+fit5 = cfa(model5, data = bio_select_mod4, ordered = names(bio_select_mod4), estimator = "ULS")
+
+summary(fit5, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit5, power = TRUE, sort = TRUE)
+```
+
+```{r}
+fit7 = sem(model7, data = bio_select_mod4, ordered = names(bio_select_mod4), estimator = "ULS")
+
+summary(fit7, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit7, power = TRUE, sort = TRUE)
+```
+
+```{r}
+fit8 = cfa(model8, data = bio_select_mod4, ordered = names(bio_select_mod4), estimator = "ULS")
+
+summary(fit8, rsquare = TRUE, fit.measures = TRUE)
+
+modindices(fit8, power = TRUE, sort = TRUE)
+```
+
+```{r, fig.height = 10, fig.width = 14}
+?semPaths
+semPaths(fit8, "est", weighted = FALSE, nCharNodes = 2, shapeMan = "rectangle",
+         sizeMan = 8, sizeMan2 = 1)
+```
+
+```{r, fig.height = 12, fig.width = 14}
+bio_select_mod9 = bio_select_mod4 %>% 
+  dplyr::select(-arvspregnancydetail, -gender, -testedpregnancyawaredetail, -hivtstrslt, -evertested, -testedreceiveddetail, -artselfreported)
+
+D = cor(bio_select_mod9)
+
+corrplot(D)
+
+iclust(D, nclusters=5)
+```
+
+# why stop there
+
+```{r}
+model9 <- '
+          aware_prg =~ hivstatuslastpregnancy
+          wrns =~ known_hiv_status
+          arvs =~ arvstatus
+          tsd =~ hivtstever
+          vlspr =~ vlunder200
+'
+```
+
+```{r}
+C = cor(bio_select_mod9)
+
+corrplot(C)
+
+output = vector(mode = "list", length = length(C))
+rname = NULL
+cname = NULL
+for(i in 1:nrow(C)) {
+  for(j in 1:ncol(C)) {
+    rname[[i]] = dimnames(C)[[c(1, i)]]
+    cname[[j]] = dimnames(C)[[c(2, j)]]
+    output[[c(i, j)]] = tibble_row(i, j, rname[[i]], cname[[j]], C[[i, j]])
+  }
+}
+
+# Matrify 2
+
+matrify2 = function(pdata = output) {
+  result = NULL
+  for(i in 1:length(pdata)) {
+      result[[i]] = tibble(pdata[[i]])
+  }
+  result = bind_rows(result)
+  return(result)
+}
+
+df2 = vector(mode = "list", length = ncol(C))
+for(j in 1:ncol(C)) {
+  df2[[j]] = matrify2(pdata = output[[j]])
+}
+
+union_df = bind_rows(df2) %>% 
+  rename("value" = "C[[i, j]]",
+         "column" = "cname[[j]]",
+         "row" = "rname[[i]]")
+high_df = union_df %>% 
+  filter(value >= 0.7,
+         value != 1,
+         i < j)
+
+high_df
+```
+
+```{r}
+fit9 = cfa(model9, data = bio_select_mod9, ordered = names(bio_select_mod9), estimator = "ULS", std.lv = TRUE)
+
+lavInspect(fit9, what = "cov.lv")
+```
+
+```{r}
+poLCA(cbind(hivstatuslastpregnancy, known_hiv_status, arvstatus, hivtstever, vlunder200)~1, data = bio_select_mod3, nclass = 5)
+```
+
+
